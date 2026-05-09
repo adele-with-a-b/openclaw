@@ -43,7 +43,7 @@ type TranscriptMigrationResult = TranscriptRepairResult & {
 
 type CodexAppServerBindingMigrationResult = {
   filePath: string;
-  sessionFile: string;
+  transcriptLocator: string;
   imported: boolean;
   removedSource: boolean;
   reason?: string;
@@ -297,12 +297,12 @@ async function listCodexAppServerBindingSidecars(sessionDirs: string[]): Promise
   return files.toSorted((a, b) => a.localeCompare(b));
 }
 
-function resolveCodexAppServerBindingSessionFile(sidecarPath: string): string {
+function resolveCodexAppServerBindingTranscriptLocator(sidecarPath: string): string {
   return sidecarPath.slice(0, -CODEX_APP_SERVER_BINDING_SIDECAR_SUFFIX.length);
 }
 
 function normalizeCodexAppServerBindingPayload(
-  sessionFile: string,
+  transcriptLocator: string,
   value: unknown,
 ): OpenClawStateJsonValue | undefined {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
@@ -318,7 +318,7 @@ function normalizeCodexAppServerBindingPayload(
   }
   return {
     schemaVersion: 1,
-    sessionFile,
+    transcriptLocator,
     threadId: parsed.threadId,
     cwd: typeof parsed.cwd === "string" ? parsed.cwd : "",
     authProfileId: typeof parsed.authProfileId === "string" ? parsed.authProfileId : undefined,
@@ -340,14 +340,14 @@ async function migrateCodexAppServerBindingSidecar(params: {
   filePath: string;
   shouldRepair: boolean;
 }): Promise<CodexAppServerBindingMigrationResult> {
-  const sessionFile = resolveCodexAppServerBindingSessionFile(params.filePath);
+  const transcriptLocator = resolveCodexAppServerBindingTranscriptLocator(params.filePath);
   try {
     const raw = await fs.readFile(params.filePath, "utf-8");
-    const payload = normalizeCodexAppServerBindingPayload(sessionFile, JSON.parse(raw));
+    const payload = normalizeCodexAppServerBindingPayload(transcriptLocator, JSON.parse(raw));
     if (!payload) {
       return {
         filePath: params.filePath,
-        sessionFile,
+        transcriptLocator,
         imported: false,
         removedSource: false,
         reason: "invalid binding payload",
@@ -356,23 +356,23 @@ async function migrateCodexAppServerBindingSidecar(params: {
     if (!params.shouldRepair) {
       return {
         filePath: params.filePath,
-        sessionFile,
+        transcriptLocator,
         imported: false,
         removedSource: false,
       };
     }
-    writeOpenClawStateKvJson(CODEX_APP_SERVER_BINDING_KV_SCOPE, sessionFile, payload);
+    writeOpenClawStateKvJson(CODEX_APP_SERVER_BINDING_KV_SCOPE, transcriptLocator, payload);
     await fs.rm(params.filePath, { force: true });
     return {
       filePath: params.filePath,
-      sessionFile,
+      transcriptLocator,
       imported: true,
       removedSource: true,
     };
   } catch (error) {
     return {
       filePath: params.filePath,
-      sessionFile,
+      transcriptLocator,
       imported: false,
       removedSource: false,
       reason: String(error),
@@ -455,7 +455,7 @@ export async function noteSessionTranscriptHealth(params?: {
     }
   }
   if (!shouldRepair) {
-    lines.push('- Run "openclaw doctor --fix" to import legacy session files into SQLite.');
+    lines.push('- Run "openclaw doctor --fix" to import legacy transcript locators into SQLite.');
   } else if (imported.length > 0) {
     lines.push(
       `- Imported ${imported.length} transcript file${imported.length === 1 ? "" : "s"} into SQLite and removed the JSONL source${imported.length === 1 ? "" : "s"}.`,

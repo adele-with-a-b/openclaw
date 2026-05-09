@@ -84,7 +84,7 @@ import {
 } from "./doctor/legacy/tts-prefs.js";
 import {
   importLegacyTuiLastSessionStoreToSqlite,
-  legacyTuiLastSessionFileExists,
+  legacyTuiLastTranscriptLocatorExists,
 } from "./doctor/legacy/tui-last-session.js";
 import {
   importLegacyUpdateCheckFileToSqlite,
@@ -197,7 +197,7 @@ async function probeLegacyRuntimeStateFiles(params: {
     pluginBindingApprovals: legacyPluginBindingApprovalFileExists(),
     installedPluginIndex: legacyInstalledPluginIndexFileExists({ env, stateDir: baseDir }),
     subagents: legacySubagentRegistryFileExists(env),
-    tuiLastSession: await legacyTuiLastSessionFileExists({ stateDir: baseDir }),
+    tuiLastSession: await legacyTuiLastTranscriptLocatorExists({ stateDir: baseDir }),
     acpEventLedger: legacyAcpEventLedgerFileExists(env),
     ttsPrefs: await legacyTtsPrefsFileExists(env),
     voiceWake: await legacyVoiceWakeConfigFileExists(baseDir),

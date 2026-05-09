@@ -56,7 +56,7 @@ describe("artifacts RPC handlers", () => {
     hoisted.loadSessionEntry.mockReturnValue({
       entry: {
         sessionId: "sess-main",
-        sessionFile: createSqliteSessionTranscriptLocator({
+        transcriptLocator: createSqliteSessionTranscriptLocator({
           agentId: "main",
           sessionId: "sess-main",
         }),
@@ -81,7 +81,7 @@ describe("artifacts RPC handlers", () => {
 
   function mockedMessages(messages: unknown[]) {
     hoisted.visitSessionMessagesAsync.mockImplementation(
-      async (_sessionId, _sessionFile, visit) => {
+      async (_sessionId, _transcriptLocator, visit) => {
         messages.forEach((message, index) => visit(message, index + 1));
         return messages.length;
       },

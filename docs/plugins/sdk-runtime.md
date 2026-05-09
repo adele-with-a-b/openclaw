@@ -96,7 +96,7 @@ Provider and channel execution paths must use the active runtime config snapshot
     const result = await api.runtime.agent.runEmbeddedAgent({
       sessionId,
       runId: crypto.randomUUID(),
-      sessionFile: createSqliteSessionTranscriptLocator({ agentId, sessionId }),
+      transcriptLocator: createSqliteSessionTranscriptLocator({ agentId, sessionId }),
       workspaceDir: api.runtime.agent.resolveAgentWorkspaceDir(cfg),
       prompt: "Summarize the latest changes",
       timeoutMs: api.runtime.agent.resolveAgentTimeoutMs(cfg),
@@ -125,7 +125,7 @@ Provider and channel execution paths must use the active runtime config snapshot
         thinkingLevel: "high",
       }),
     });
-    const sessionFile = createSqliteSessionTranscriptLocator({ agentId, sessionId });
+    const transcriptLocator = createSqliteSessionTranscriptLocator({ agentId, sessionId });
     ```
 
     Prefer row helpers such as `getSessionEntry(...)`, `listSessionEntries(...)`, `patchSessionEntry(...)`, and `upsertSessionEntry(...)` for runtime writes. They route through the SQLite session row store and preserve concurrent updates. Legacy `sessions.json` parsing belongs in doctor import code, not plugin runtime paths.

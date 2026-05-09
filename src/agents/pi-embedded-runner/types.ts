@@ -6,7 +6,7 @@ import type { MessagingToolSend } from "../pi-embedded-messaging.types.js";
 
 export type EmbeddedPiAgentMeta = {
   sessionId: string;
-  sessionFile?: string;
+  transcriptLocator?: string;
   provider: string;
   model: string;
   contextTokens?: number;
@@ -207,7 +207,7 @@ export type EmbeddedPiCompactResult = {
     tokensAfter?: number;
     details?: unknown;
     sessionId?: string;
-    sessionFile?: string;
+    transcriptLocator?: string;
   };
 };
 

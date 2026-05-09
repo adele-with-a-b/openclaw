@@ -173,7 +173,7 @@ async function resolveTelegramCommandTranscriptLocator(params: {
   agentId: string;
   sessionKey: string;
   threadId?: string | number;
-}): Promise<{ sessionId?: string; sessionFile?: string }> {
+}): Promise<{ sessionId?: string; transcriptLocator?: string }> {
   const sessionKey = params.sessionKey.trim();
   if (!sessionKey) {
     return {};
@@ -197,7 +197,7 @@ async function resolveTelegramCommandTranscriptLocator(params: {
       agentId: params.agentId,
       fallbackTranscriptLocator,
     });
-    return { sessionId, sessionFile: persisted.transcriptLocator };
+    return { sessionId, transcriptLocator: persisted.transcriptLocator };
   } catch {
     return {};
   }
@@ -1332,7 +1332,7 @@ export const registerTelegramNativeCommands = ({
           } catch {}
         }
 
-        const sessionFileContext = await resolveTelegramCommandTranscriptLocator({
+        const transcriptLocatorContext = await resolveTelegramCommandTranscriptLocator({
           cfg: runtimeCfg,
           agentId: route.agentId,
           sessionKey: route.sessionKey,
@@ -1348,8 +1348,8 @@ export const registerTelegramNativeCommands = ({
             isAuthorizedSender: commandAuthorized,
             senderIsOwner,
             sessionKey: route.sessionKey,
-            sessionId: sessionFileContext.sessionId,
-            sessionFile: sessionFileContext.sessionFile,
+            sessionId: transcriptLocatorContext.sessionId,
+            transcriptLocator: transcriptLocatorContext.transcriptLocator,
             commandBody,
             config: runtimeCfg,
             from,

@@ -27,7 +27,7 @@ export function createCodexTrajectoryRecorder(
     runId: params.attempt.runId,
     sessionId: params.attempt.sessionId,
     sessionKey: params.attempt.sessionKey,
-    sessionFile: params.attempt.sessionFile,
+    transcriptLocator: params.attempt.transcriptLocator,
     provider: params.attempt.provider,
     modelId: params.attempt.modelId,
     modelApi: params.attempt.model.api,

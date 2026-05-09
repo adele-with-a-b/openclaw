@@ -91,7 +91,7 @@ export function refreshQueuedFollowupSession(params: {
   key: string;
   previousSessionId?: string;
   nextSessionId?: string;
-  nextSessionFile?: string;
+  nextTranscriptLocator?: string;
   nextProvider?: string;
   nextModel?: string;
   nextModelOverrideSource?: "auto" | "user";
@@ -126,9 +126,9 @@ export function refreshQueuedFollowupSession(params: {
     }
     if (shouldRewriteSession && run.sessionId === params.previousSessionId) {
       run.sessionId = params.nextSessionId!;
-      const nextSessionFile = normalizeOptionalString(params.nextSessionFile);
-      if (nextSessionFile) {
-        run.sessionFile = nextSessionFile;
+      const nextTranscriptLocator = normalizeOptionalString(params.nextTranscriptLocator);
+      if (nextTranscriptLocator) {
+        run.transcriptLocator = nextTranscriptLocator;
       }
     }
     if (shouldRewriteSelection) {

@@ -21,9 +21,9 @@ describe("guardSessionManager transcript updates", () => {
     listeners.push(onSessionTranscriptUpdate((update) => updates.push(update)));
 
     const sm = SessionManager.inMemory();
-    const sessionFile = "/tmp/openclaw-session-message-events.jsonl";
+    const transcriptLocator = "/tmp/openclaw-session-message-events.jsonl";
     Object.assign(sm, {
-      getSessionFile: () => sessionFile,
+      getTranscriptLocator: () => transcriptLocator,
     });
 
     const guarded = guardSessionManager(sm, {
@@ -43,7 +43,7 @@ describe("guardSessionManager transcript updates", () => {
 
     expect(updates).toHaveLength(1);
     expect(updates[0]).toMatchObject({
-      sessionFile,
+      transcriptLocator,
       sessionKey: "agent:main:worker",
       message: {
         role: "assistant",

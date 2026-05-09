@@ -21,12 +21,12 @@ import { createCodexTestModel } from "./test-support.js";
 
 let tempDir: string;
 
-function createParams(sessionFile: string, workspaceDir: string): EmbeddedRunAttemptParams {
+function createParams(transcriptLocator: string, workspaceDir: string): EmbeddedRunAttemptParams {
   return {
     prompt: "hello",
     sessionId: "session-1",
     sessionKey: "agent:main:session-1",
-    sessionFile,
+    transcriptLocator,
     workspaceDir,
     runId: "run-1",
     provider: "codex",
@@ -69,11 +69,11 @@ function userMessage(text: string, timestamp: number): AgentMessage {
   } as AgentMessage;
 }
 
-function seedSessionTranscript(sessionFile: string, messages: AgentMessage[]): void {
+function seedSessionTranscript(transcriptLocator: string, messages: AgentMessage[]): void {
   replaceSqliteSessionTranscriptEvents({
     agentId: "main",
     sessionId: "session-1",
-    transcriptPath: sessionFile,
+    transcriptPath: transcriptLocator,
     events: [
       {
         type: "session",
@@ -242,13 +242,13 @@ describe("runCodexAppServerAttempt context-engine lifecycle", () => {
   });
 
   it("bootstraps and assembles non-legacy context before the Codex turn starts", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
     const workspaceDir = path.join(tempDir, "workspace");
-    seedSessionTranscript(sessionFile, [assistantMessage("existing context", Date.now())]);
+    seedSessionTranscript(transcriptLocator, [assistantMessage("existing context", Date.now())]);
     const openSpy = vi.spyOn(SessionManager, "open");
     const contextEngine = createContextEngine();
     const harness = createStartedThreadHarness();
-    const params = createParams(sessionFile, workspaceDir);
+    const params = createParams(transcriptLocator, workspaceDir);
     params.contextEngine = contextEngine;
     params.contextTokenBudget = 321;
     params.config = { memory: { citations: "on" } } as EmbeddedRunAttemptParams["config"];
@@ -260,7 +260,7 @@ describe("runCodexAppServerAttempt context-engine lifecycle", () => {
       expect.objectContaining({
         sessionId: "session-1",
         sessionKey: "agent:main:session-1",
-        sessionFile,
+        transcriptLocator,
       }),
     );
     expect(contextEngine.assemble).toHaveBeenCalledWith(
@@ -303,7 +303,7 @@ describe("runCodexAppServerAttempt context-engine lifecycle", () => {
   });
 
   it("calls afterTurn with the mirrored transcript and runs turn maintenance", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
     const workspaceDir = path.join(tempDir, "workspace");
     const afterTurn = vi.fn(
       async (_params: Parameters<NonNullable<ContextEngine["afterTurn"]>>[0]) => undefined,
@@ -311,7 +311,7 @@ describe("runCodexAppServerAttempt context-engine lifecycle", () => {
     const maintain = vi.fn(async () => ({ changed: false, bytesFreed: 0, rewrittenEntries: 0 }));
     const contextEngine = createContextEngine({ afterTurn, maintain, bootstrap: undefined });
     const harness = createStartedThreadHarness();
-    const params = createParams(sessionFile, workspaceDir);
+    const params = createParams(transcriptLocator, workspaceDir);
     params.contextEngine = contextEngine;
     params.contextTokenBudget = 111;
 
@@ -338,14 +338,16 @@ describe("runCodexAppServerAttempt context-engine lifecycle", () => {
   });
 
   it("reloads mirrored history after bootstrap mutates the session transcript", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
     const workspaceDir = path.join(tempDir, "workspace");
-    seedSessionTranscript(sessionFile, [assistantMessage("existing context", Date.now())]);
+    seedSessionTranscript(transcriptLocator, [assistantMessage("existing context", Date.now())]);
     const afterTurn = vi.fn(
       async (_params: Parameters<NonNullable<ContextEngine["afterTurn"]>>[0]) => undefined,
     );
     const bootstrap = vi.fn(
-      async ({ sessionFile: file }: Parameters<NonNullable<ContextEngine["bootstrap"]>>[0]) => {
+      async ({
+        transcriptLocator: file,
+      }: Parameters<NonNullable<ContextEngine["bootstrap"]>>[0]) => {
         appendSqliteSessionTranscriptEvent({
           agentId: "main",
           sessionId: "session-1",
@@ -367,7 +369,7 @@ describe("runCodexAppServerAttempt context-engine lifecycle", () => {
       maintain: undefined,
     });
     const harness = createStartedThreadHarness();
-    const params = createParams(sessionFile, workspaceDir);
+    const params = createParams(transcriptLocator, workspaceDir);
     params.contextEngine = contextEngine;
 
     const run = runCodexAppServerAttempt(params);
@@ -402,7 +404,7 @@ describe("runCodexAppServerAttempt context-engine lifecycle", () => {
   });
 
   it("logs assemble failures as a formatted message instead of the raw error object", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
     const workspaceDir = path.join(tempDir, "workspace");
     const rawError = new Error("Authorization: Bearer sk-abcdefghijklmnopqrstuv");
     const contextEngine = createContextEngine({
@@ -413,7 +415,7 @@ describe("runCodexAppServerAttempt context-engine lifecycle", () => {
     });
     const warn = vi.spyOn(embeddedAgentLog, "warn").mockImplementation(() => undefined);
     const harness = createStartedThreadHarness();
-    const params = createParams(sessionFile, workspaceDir);
+    const params = createParams(transcriptLocator, workspaceDir);
     params.contextEngine = contextEngine;
 
     const run = runCodexAppServerAttempt(params);
@@ -437,7 +439,7 @@ describe("runCodexAppServerAttempt context-engine lifecycle", () => {
   });
 
   it("falls back to ingestBatch and skips turn maintenance on prompt failure", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
     const workspaceDir = path.join(tempDir, "workspace");
     const ingestBatch = vi.fn(async () => ({ ingestedCount: 2 }));
     const maintain = vi.fn(async () => ({ changed: false, bytesFreed: 0, rewrittenEntries: 0 }));
@@ -448,7 +450,7 @@ describe("runCodexAppServerAttempt context-engine lifecycle", () => {
       bootstrap: undefined,
     });
     const harness = createStartedThreadHarness();
-    const params = createParams(sessionFile, workspaceDir);
+    const params = createParams(transcriptLocator, workspaceDir);
     params.contextEngine = contextEngine;
 
     const run = runCodexAppServerAttempt(params);

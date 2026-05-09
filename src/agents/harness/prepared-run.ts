@@ -23,7 +23,7 @@ type PreparedRunAttemptShape = Pick<
   | "provider"
   | "replyOperation"
   | "runId"
-  | "sessionFile"
+  | "transcriptLocator"
   | "sessionId"
   | "sessionKey"
   | "shouldEmitToolOutput"
@@ -44,7 +44,7 @@ type PreparedRunParamsShape = Pick<
   | "initialVfsEntries"
   | "replyOperation"
   | "runId"
-  | "sessionFile"
+  | "transcriptLocator"
   | "sessionId"
   | "sessionKey"
   | "shouldEmitToolOutput"
@@ -98,7 +98,7 @@ function createPreparedAgentRun(
     agentId: source.agentId ?? resolveAgentIdFromSessionKey(source.sessionKey),
     sessionId: source.sessionId,
     ...(source.sessionKey ? { sessionKey: source.sessionKey } : {}),
-    sessionFile: source.sessionFile,
+    transcriptLocator: source.transcriptLocator,
     workspaceDir: source.workspaceDir,
     ...(source.agentDir ? { agentDir: source.agentDir } : {}),
     prompt: source.prompt,

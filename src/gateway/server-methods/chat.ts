@@ -1315,11 +1315,11 @@ export function enforceChatHistoryFinalBudget(params: { messages: unknown[]; max
 
 function resolveTranscriptLocator(params: {
   sessionId: string;
-  sessionFile?: string;
+  transcriptLocator?: string;
   agentId?: string;
 }): string | null {
   const { sessionId, agentId } = params;
-  if (!agentId && !params.sessionFile) {
+  if (!agentId && !params.transcriptLocator) {
     return null;
   }
   try {
@@ -1334,7 +1334,7 @@ async function appendAssistantTranscriptMessage(params: {
   label?: string;
   content?: Array<Record<string, unknown>>;
   sessionId: string;
-  sessionFile?: string;
+  transcriptLocator?: string;
   agentId?: string;
   createIfMissing?: boolean;
   idempotencyKey?: string;
@@ -1347,7 +1347,7 @@ async function appendAssistantTranscriptMessage(params: {
 }): Promise<TranscriptAppendResult> {
   const transcriptLocator = resolveTranscriptLocator({
     sessionId: params.sessionId,
-    sessionFile: params.sessionFile,
+    transcriptLocator: params.transcriptLocator,
     agentId: params.agentId,
   });
   if (!transcriptLocator) {
@@ -1407,7 +1407,7 @@ async function persistAbortedPartials(params: {
     const appended = await appendAssistantTranscriptMessage({
       message: snapshot.text,
       sessionId,
-      sessionFile: entry?.sessionFile,
+      transcriptLocator: entry?.transcriptLocator,
       agentId,
       createIfMissing: true,
       idempotencyKey: `${snapshot.runId}:assistant`,
@@ -1684,7 +1684,7 @@ export const chatHandlers: GatewayRequestHandlers = {
     const max = Math.min(hardMax, requested);
     const maxHistoryBytes = getMaxChatHistoryMessagesBytes();
     const localMessages = sessionId
-      ? await readRecentSessionMessagesAsync(sessionId, entry?.sessionFile, {
+      ? await readRecentSessionMessagesAsync(sessionId, entry?.transcriptLocator, {
           agentId: sessionAgentId,
           maxMessages: max,
           maxBytes: Math.max(maxHistoryBytes * 2, 1024 * 1024),
@@ -2260,7 +2260,7 @@ export const chatHandlers: GatewayRequestHandlers = {
               }
               const transcriptLocator = resolveTranscriptLocator({
                 sessionId: resolvedSessionId,
-                sessionFile: latestEntry?.sessionFile ?? entry?.sessionFile,
+                transcriptLocator: latestEntry?.transcriptLocator ?? entry?.transcriptLocator,
                 agentId,
               });
               if (!transcriptLocator) {
@@ -2270,7 +2270,7 @@ export const chatHandlers: GatewayRequestHandlers = {
               emitSessionTranscriptUpdate({
                 agentId,
                 sessionId: resolvedSessionId,
-                sessionFile: transcriptLocator,
+                transcriptLocator: transcriptLocator,
                 sessionKey,
                 message: buildChatSendTranscriptMessage({
                   message: parsedMessage,
@@ -2300,7 +2300,7 @@ export const chatHandlers: GatewayRequestHandlers = {
         }
         const transcriptLocator = resolveTranscriptLocator({
           sessionId: resolvedSessionId,
-          sessionFile: latestEntry?.sessionFile ?? entry?.sessionFile,
+          transcriptLocator: latestEntry?.transcriptLocator ?? entry?.transcriptLocator,
           agentId,
         });
         if (!transcriptLocator) {
@@ -2335,7 +2335,7 @@ export const chatHandlers: GatewayRequestHandlers = {
         const sessionId = latestEntry?.sessionId ?? backingSessionId ?? clientRunId;
         const resolvedTranscriptLocator = resolveTranscriptLocator({
           sessionId,
-          sessionFile: latestEntry?.sessionFile ?? entry?.sessionFile,
+          transcriptLocator: latestEntry?.transcriptLocator ?? entry?.transcriptLocator,
           agentId,
         });
         const mediaLocalRoots = appendLocalMediaParentRoots(
@@ -2381,7 +2381,7 @@ export const chatHandlers: GatewayRequestHandlers = {
           message: transcriptReply,
           ...(persistedContentForAppend?.length ? { content: persistedContentForAppend } : {}),
           sessionId,
-          sessionFile: latestEntry?.sessionFile,
+          transcriptLocator: latestEntry?.transcriptLocator,
           agentId,
           createIfMissing: true,
           idempotencyKey: `${clientRunId}:assistant-media`,
@@ -2527,7 +2527,7 @@ export const chatHandlers: GatewayRequestHandlers = {
                   const sessionId = latestEntry?.sessionId ?? backingSessionId ?? clientRunId;
                   const resolvedTranscriptLocator = resolveTranscriptLocator({
                     sessionId,
-                    sessionFile: latestEntry?.sessionFile ?? entry?.sessionFile,
+                    transcriptLocator: latestEntry?.transcriptLocator ?? entry?.transcriptLocator,
                     agentId,
                   });
                   const mediaLocalRoots = appendLocalMediaParentRoots(
@@ -2611,7 +2611,7 @@ export const chatHandlers: GatewayRequestHandlers = {
                         ? { content: persistedContentForAppend }
                         : {}),
                       sessionId,
-                      sessionFile: latestEntry?.sessionFile,
+                      transcriptLocator: latestEntry?.transcriptLocator,
                       agentId,
                       createIfMissing: true,
                       cfg,
@@ -2783,7 +2783,7 @@ export const chatHandlers: GatewayRequestHandlers = {
       message: p.message,
       label: p.label,
       sessionId,
-      sessionFile: entry?.sessionFile,
+      transcriptLocator: entry?.transcriptLocator,
       agentId,
       createIfMissing: true,
       cfg,

@@ -139,7 +139,7 @@ function makeAsyncEvents(events: unknown[]) {
 function createSessionEntry(overrides: Partial<SessionEntry> = {}): SessionEntry {
   return {
     sessionId: "session-1",
-    sessionFile: createSqliteSessionTranscriptLocator({
+    transcriptLocator: createSqliteSessionTranscriptLocator({
       agentId: "main",
       sessionId: "session-1",
     }),

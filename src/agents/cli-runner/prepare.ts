@@ -304,7 +304,7 @@ export async function prepareCliRunContext(
   const loadOpenClawHistoryMessages = async () => {
     openClawHistoryMessages ??= await loadCliSessionHistoryMessages({
       sessionId: params.sessionId,
-      sessionFile: params.sessionFile,
+      transcriptLocator: params.transcriptLocator,
       sessionKey: params.sessionKey,
       agentId: params.agentId,
       config: params.config,
@@ -410,7 +410,7 @@ export async function prepareCliRunContext(
     : buildCliSessionHistoryPrompt({
         messages: await loadCliSessionReseedMessages({
           sessionId: params.sessionId,
-          sessionFile: params.sessionFile,
+          transcriptLocator: params.transcriptLocator,
           sessionKey: params.sessionKey,
           agentId: params.agentId,
           config: params.config,

@@ -16,7 +16,7 @@ export type PreparedAgentRun = {
   agentId: string;
   sessionId: string;
   sessionKey?: string;
-  sessionFile: string;
+  transcriptLocator: string;
   workspaceDir: string;
   agentDir?: string;
   prompt: string;
@@ -96,7 +96,7 @@ export function assertPreparedAgentRunSerializable(run: PreparedAgentRun): Prepa
     "runId",
     "agentId",
     "sessionId",
-    "sessionFile",
+    "transcriptLocator",
     "workspaceDir",
     "prompt",
   ] satisfies (keyof PreparedAgentRun)[];

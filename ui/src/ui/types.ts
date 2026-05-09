@@ -392,7 +392,7 @@ export type SessionCompactionCheckpointReason =
 
 export type SessionCompactionTranscriptReference = {
   sessionId: string;
-  sessionFile?: string;
+  transcriptLocator?: string;
   leafId?: string;
   entryId?: string;
 };

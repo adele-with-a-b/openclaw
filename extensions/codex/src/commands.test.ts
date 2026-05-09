@@ -27,7 +27,7 @@ let previousStateDir: string | undefined;
 
 function createContext(
   args: string,
-  sessionFile?: string,
+  transcriptLocator?: string,
   overrides: Partial<PluginCommandContext> = {},
 ): PluginCommandContext {
   return {
@@ -38,7 +38,7 @@ function createContext(
     args,
     commandBody: `/codex ${args}`,
     config: {},
-    sessionFile,
+    transcriptLocator,
     requestConversationBinding: async () => ({ status: "error", message: "unused" }),
     detachConversationBinding: async () => ({ removed: false }),
     getCurrentConversationBinding: async () => null,
@@ -74,10 +74,10 @@ function createDeps(overrides: Partial<CodexCommandDeps> = {}): Partial<CodexCom
 }
 
 async function seedCodexBinding(
-  sessionFile: string,
+  transcriptLocator: string,
   binding: Partial<CodexAppServerThreadBinding> & { threadId: string },
 ): Promise<void> {
-  await writeCodexAppServerBinding(sessionFile, {
+  await writeCodexAppServerBinding(transcriptLocator, {
     threadId: binding.threadId,
     cwd: binding.cwd ?? tempDir,
     authProfileId: binding.authProfileId,
@@ -150,7 +150,7 @@ describe("codex command", () => {
   });
 
   it("attaches the current session to an existing Codex thread", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
     const requests: Array<{ method: string; params: unknown }> = [];
     const deps = createDeps({
       codexControlRequest: vi.fn(
@@ -166,7 +166,7 @@ describe("codex command", () => {
     });
 
     await expect(
-      handleCodexCommand(createContext("resume thread-123", sessionFile), { deps }),
+      handleCodexCommand(createContext("resume thread-123", transcriptLocator), { deps }),
     ).resolves.toEqual({
       text: "Attached this OpenClaw session to Codex thread thread-123.",
     });
@@ -177,18 +177,18 @@ describe("codex command", () => {
         params: { threadId: "thread-123", persistExtendedHistory: true },
       },
     ]);
-    await expect(readCodexAppServerBinding(sessionFile)).resolves.toMatchObject({
+    await expect(readCodexAppServerBinding(transcriptLocator)).resolves.toMatchObject({
       threadId: "thread-123",
     });
   });
 
   it("rejects malformed resume commands before attaching a Codex thread", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
     const codexControlRequest = vi.fn();
     const writeCodexAppServerBinding = vi.fn();
 
     await expect(
-      handleCodexCommand(createContext("resume thread-123 extra", sessionFile), {
+      handleCodexCommand(createContext("resume thread-123 extra", transcriptLocator), {
         deps: createDeps({ codexControlRequest, writeCodexAppServerBinding }),
       }),
     ).resolves.toEqual({
@@ -199,7 +199,7 @@ describe("codex command", () => {
   });
 
   it("escapes resumed Codex thread ids before chat display", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
     const unsafe = "thread-123 <@U123> [trusted](https://evil)";
     const deps = createDeps({
       codexControlRequest: vi.fn(async () => ({
@@ -207,7 +207,7 @@ describe("codex command", () => {
       })),
     });
 
-    const result = await handleCodexCommand(createContext("resume thread-123", sessionFile), {
+    const result = await handleCodexCommand(createContext("resume thread-123", transcriptLocator), {
       deps,
     });
 
@@ -610,15 +610,19 @@ describe("codex command", () => {
   });
 
   it("starts compaction for the attached Codex thread", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
-    await seedCodexBinding(sessionFile, { schemaVersion: 1, threadId: "thread-123", cwd: "/repo" });
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
+    await seedCodexBinding(transcriptLocator, {
+      schemaVersion: 1,
+      threadId: "thread-123",
+      cwd: "/repo",
+    });
     const codexControlRequest = vi.fn(async () => ({}));
     const deps = createDeps({
       codexControlRequest,
     });
 
     await expect(
-      handleCodexCommand(createContext("compact", sessionFile), { deps }),
+      handleCodexCommand(createContext("compact", transcriptLocator), { deps }),
     ).resolves.toEqual({
       text: "Started Codex compaction for thread thread-123.",
     });
@@ -628,12 +632,16 @@ describe("codex command", () => {
   });
 
   it("starts review with the generated app-server target shape", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
-    await seedCodexBinding(sessionFile, { schemaVersion: 1, threadId: "thread-123", cwd: "/repo" });
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
+    await seedCodexBinding(transcriptLocator, {
+      schemaVersion: 1,
+      threadId: "thread-123",
+      cwd: "/repo",
+    });
     const codexControlRequest = vi.fn(async () => ({}));
 
     await expect(
-      handleCodexCommand(createContext("review", sessionFile), {
+      handleCodexCommand(createContext("review", transcriptLocator), {
         deps: createDeps({ codexControlRequest }),
       }),
     ).resolves.toEqual({
@@ -646,18 +654,18 @@ describe("codex command", () => {
   });
 
   it("rejects malformed compact and review commands before starting thread actions", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
     const codexControlRequest = vi.fn();
 
     await expect(
-      handleCodexCommand(createContext("compact now", sessionFile), {
+      handleCodexCommand(createContext("compact now", transcriptLocator), {
         deps: createDeps({ codexControlRequest }),
       }),
     ).resolves.toEqual({
       text: "Usage: /codex compact",
     });
     await expect(
-      handleCodexCommand(createContext("review staged", sessionFile), {
+      handleCodexCommand(createContext("review staged", transcriptLocator), {
         deps: createDeps({ codexControlRequest }),
       }),
     ).resolves.toEqual({
@@ -667,15 +675,15 @@ describe("codex command", () => {
   });
 
   it("escapes started thread-action ids before chat display", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
-    await seedCodexBinding(sessionFile, {
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
+    await seedCodexBinding(transcriptLocator, {
       schemaVersion: 1,
       threadId: "thread-123 <@U123>",
       cwd: "/repo",
     });
     const codexControlRequest = vi.fn(async () => ({}));
 
-    const result = await handleCodexCommand(createContext("compact", sessionFile), {
+    const result = await handleCodexCommand(createContext("compact", transcriptLocator), {
       deps: createDeps({ codexControlRequest }),
     });
 
@@ -809,18 +817,22 @@ describe("codex command", () => {
   });
 
   it("explains compaction when no Codex thread is attached", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
 
     await expect(
-      handleCodexCommand(createContext("compact", sessionFile), { deps: createDeps() }),
+      handleCodexCommand(createContext("compact", transcriptLocator), { deps: createDeps() }),
     ).resolves.toEqual({
       text: "No Codex thread is attached to this OpenClaw session yet.",
     });
   });
 
   it("asks before sending diagnostics feedback for the attached Codex thread", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
-    await seedCodexBinding(sessionFile, { schemaVersion: 1, threadId: "thread-123", cwd: "/repo" });
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
+    await seedCodexBinding(transcriptLocator, {
+      schemaVersion: 1,
+      threadId: "thread-123",
+      cwd: "/repo",
+    });
     const safeCodexControlRequest = vi.fn(async () => ({
       ok: true as const,
       value: { threadId: "thread-123" },
@@ -828,7 +840,7 @@ describe("codex command", () => {
     const deps = createDeps({ safeCodexControlRequest });
 
     const request = await handleCodexCommand(
-      createContext("diagnostics tool loop repro", sessionFile, {
+      createContext("diagnostics tool loop repro", transcriptLocator, {
         senderId: "user-1",
         sessionId: "session-1",
         sessionKey: "agent:main:session-1",
@@ -874,7 +886,7 @@ describe("codex command", () => {
 
     await expect(
       handleCodexCommand(
-        createContext(`diagnostics confirm ${token}`, sessionFile, {
+        createContext(`diagnostics confirm ${token}`, transcriptLocator, {
           senderId: "user-1",
           sessionId: "session-1",
           sessionKey: "agent:main:session-1",
@@ -910,8 +922,8 @@ describe("codex command", () => {
   });
 
   it("rejects malformed diagnostics confirmation commands without consuming the token", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
-    await seedCodexBinding(sessionFile, {
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
+    await seedCodexBinding(transcriptLocator, {
       schemaVersion: 1,
       threadId: "thread-confirm-args",
       cwd: "/repo",
@@ -922,11 +934,13 @@ describe("codex command", () => {
     }));
     const deps = createDeps({ safeCodexControlRequest });
 
-    const request = await handleCodexCommand(createContext("diagnostics", sessionFile), { deps });
+    const request = await handleCodexCommand(createContext("diagnostics", transcriptLocator), {
+      deps,
+    });
     const token = readDiagnosticsConfirmationToken(request);
 
     await expect(
-      handleCodexCommand(createContext(`diagnostics confirm ${token} extra`, sessionFile), {
+      handleCodexCommand(createContext(`diagnostics confirm ${token} extra`, transcriptLocator), {
         deps,
       }),
     ).resolves.toEqual({
@@ -937,7 +951,7 @@ describe("codex command", () => {
       ].join("\n"),
     });
     await expect(
-      handleCodexCommand(createContext(`diagnostics cancel ${token} extra`, sessionFile), {
+      handleCodexCommand(createContext(`diagnostics cancel ${token} extra`, transcriptLocator), {
         deps,
       }),
     ).resolves.toEqual({
@@ -950,7 +964,9 @@ describe("codex command", () => {
     expect(safeCodexControlRequest).not.toHaveBeenCalled();
 
     await expect(
-      handleCodexCommand(createContext(`diagnostics confirm ${token}`, sessionFile), { deps }),
+      handleCodexCommand(createContext(`diagnostics confirm ${token}`, transcriptLocator), {
+        deps,
+      }),
     ).resolves.toMatchObject({
       text: expect.stringContaining("Codex diagnostics sent to OpenAI servers:"),
     });
@@ -958,8 +974,8 @@ describe("codex command", () => {
   });
 
   it("previews exec-approved diagnostics upload without exposing Codex ids", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
-    await seedCodexBinding(sessionFile, {
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
+    await seedCodexBinding(transcriptLocator, {
       schemaVersion: 1,
       threadId: "thread-preview",
       cwd: "/repo",
@@ -970,7 +986,7 @@ describe("codex command", () => {
     }));
 
     const result = await handleCodexCommand(
-      createContext("diagnostics flaky tool call", sessionFile, {
+      createContext("diagnostics flaky tool call", transcriptLocator, {
         diagnosticsPreviewOnly: true,
         senderId: "user-1",
         sessionId: "session-preview",
@@ -997,8 +1013,8 @@ describe("codex command", () => {
   });
 
   it("sends diagnostics feedback immediately after exec approval", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
-    await seedCodexBinding(sessionFile, {
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
+    await seedCodexBinding(transcriptLocator, {
       schemaVersion: 1,
       threadId: "thread-approved",
       cwd: "/repo",
@@ -1011,7 +1027,7 @@ describe("codex command", () => {
 
     await expect(
       handleCodexCommand(
-        createContext("diagnostics approved repro", sessionFile, {
+        createContext("diagnostics approved repro", transcriptLocator, {
           diagnosticsUploadApproved: true,
           senderId: "user-1",
           sessionId: "session-approved",
@@ -1049,14 +1065,14 @@ describe("codex command", () => {
   });
 
   it("uploads all Codex diagnostics sessions and reports their channel/thread breakdown", async () => {
-    const firstSessionFile = path.join(tempDir, "session-one.jsonl");
-    const secondSessionFile = path.join(tempDir, "session-two.jsonl");
-    await seedCodexBinding(firstSessionFile, {
+    const firstTranscriptLocator = path.join(tempDir, "session-one.jsonl");
+    const secondTranscriptLocator = path.join(tempDir, "session-two.jsonl");
+    await seedCodexBinding(firstTranscriptLocator, {
       schemaVersion: 1,
       threadId: "thread-111",
       cwd: "/repo",
     });
-    await seedCodexBinding(secondSessionFile, {
+    await seedCodexBinding(secondTranscriptLocator, {
       schemaVersion: 1,
       threadId: "thread-222",
       cwd: "/repo",
@@ -1075,19 +1091,19 @@ describe("codex command", () => {
       {
         sessionKey: "agent:main:whatsapp:one",
         sessionId: "session-one",
-        sessionFile: firstSessionFile,
+        transcriptLocator: firstTranscriptLocator,
         channel: "whatsapp",
       },
       {
         sessionKey: "agent:main:discord:two",
         sessionId: "session-two",
-        sessionFile: secondSessionFile,
+        transcriptLocator: secondTranscriptLocator,
         channel: "discord",
       },
     ];
 
     const request = await handleCodexCommand(
-      createContext("diagnostics multi-session repro", firstSessionFile, {
+      createContext("diagnostics multi-session repro", firstTranscriptLocator, {
         senderId: "user-1",
         channel: "whatsapp",
         sessionKey: "agent:main:whatsapp:one",
@@ -1108,7 +1124,7 @@ describe("codex command", () => {
 
     await expect(
       handleCodexCommand(
-        createContext(`diagnostics confirm ${token}`, firstSessionFile, {
+        createContext(`diagnostics confirm ${token}`, firstTranscriptLocator, {
           senderId: "user-1",
           channel: "whatsapp",
           sessionKey: "agent:main:whatsapp:one",
@@ -1154,8 +1170,8 @@ describe("codex command", () => {
   });
 
   it("requires an owner for Codex diagnostics feedback uploads", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
-    await seedCodexBinding(sessionFile, {
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
+    await seedCodexBinding(transcriptLocator, {
       schemaVersion: 1,
       threadId: "thread-owner",
       cwd: "/repo",
@@ -1167,7 +1183,7 @@ describe("codex command", () => {
 
     await expect(
       handleCodexCommand(
-        createContext("diagnostics", sessionFile, {
+        createContext("diagnostics", transcriptLocator, {
           senderIsOwner: false,
         }),
         { deps: createDeps({ safeCodexControlRequest }) },
@@ -1179,8 +1195,8 @@ describe("codex command", () => {
   });
 
   it("refuses diagnostics confirmations without a stable sender identity", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
-    await seedCodexBinding(sessionFile, {
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
+    await seedCodexBinding(transcriptLocator, {
       schemaVersion: 1,
       threadId: "thread-sender-required",
       cwd: "/repo",
@@ -1188,7 +1204,7 @@ describe("codex command", () => {
 
     await expect(
       handleCodexCommand(
-        createContext("diagnostics", sessionFile, {
+        createContext("diagnostics", transcriptLocator, {
           senderId: undefined,
         }),
         { deps: createDeps() },
@@ -1199,8 +1215,8 @@ describe("codex command", () => {
   });
 
   it("keeps diagnostics confirmation scoped to the requesting sender", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
-    await seedCodexBinding(sessionFile, {
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
+    await seedCodexBinding(transcriptLocator, {
       schemaVersion: 1,
       threadId: "thread-sender",
       cwd: "/repo",
@@ -1212,14 +1228,14 @@ describe("codex command", () => {
     const deps = createDeps({ safeCodexControlRequest });
 
     const request = await handleCodexCommand(
-      createContext("diagnostics", sessionFile, { senderId: "user-1" }),
+      createContext("diagnostics", transcriptLocator, { senderId: "user-1" }),
       { deps },
     );
     const token = readDiagnosticsConfirmationToken(request);
 
     await expect(
       handleCodexCommand(
-        createContext(`diagnostics confirm ${token}`, sessionFile, { senderId: "user-2" }),
+        createContext(`diagnostics confirm ${token}`, transcriptLocator, { senderId: "user-2" }),
         { deps },
       ),
     ).resolves.toEqual({
@@ -1229,7 +1245,7 @@ describe("codex command", () => {
   });
 
   it("consumes diagnostics confirmations before async upload work", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
     let releaseFirstConfirmBindingRead: () => void = () => undefined;
     let firstConfirmBindingReadStarted: () => void = () => undefined;
     const firstConfirmBindingRead = new Promise<void>((resolve) => {
@@ -1241,8 +1257,8 @@ describe("codex command", () => {
     let bindingReadCount = 0;
     const readCodexAppServerBindingMock = vi.fn(
       async (identity: Parameters<typeof readCodexAppServerBinding>[0]) => {
-        const bindingSessionFile =
-          typeof identity === "string" ? identity : (identity.sessionFile ?? "");
+        const bindingTranscriptLocator =
+          typeof identity === "string" ? identity : (identity.transcriptLocator ?? "");
         bindingReadCount += 1;
         if (bindingReadCount === 2) {
           firstConfirmBindingReadStarted();
@@ -1252,7 +1268,7 @@ describe("codex command", () => {
           schemaVersion: 1 as const,
           threadId: "thread-race",
           cwd: "/repo",
-          sessionFile: bindingSessionFile,
+          transcriptLocator: bindingTranscriptLocator,
           createdAt: "2026-04-28T00:00:00.000Z",
           updatedAt: "2026-04-28T00:00:00.000Z",
         };
@@ -1268,19 +1284,19 @@ describe("codex command", () => {
     });
 
     const request = await handleCodexCommand(
-      createContext("diagnostics", sessionFile, { senderId: "user-1" }),
+      createContext("diagnostics", transcriptLocator, { senderId: "user-1" }),
       { deps },
     );
     const token = readDiagnosticsConfirmationToken(request);
     const firstConfirm = handleCodexCommand(
-      createContext(`diagnostics confirm ${token}`, sessionFile, { senderId: "user-1" }),
+      createContext(`diagnostics confirm ${token}`, transcriptLocator, { senderId: "user-1" }),
       { deps },
     );
     await firstConfirmBindingReadStartedPromise;
 
     await expect(
       handleCodexCommand(
-        createContext(`diagnostics confirm ${token}`, sessionFile, { senderId: "user-1" }),
+        createContext(`diagnostics confirm ${token}`, transcriptLocator, { senderId: "user-1" }),
         { deps },
       ),
     ).resolves.toEqual({
@@ -1295,8 +1311,8 @@ describe("codex command", () => {
   });
 
   it("keeps diagnostics confirmation scoped to account and channel identity", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
-    await seedCodexBinding(sessionFile, {
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
+    await seedCodexBinding(transcriptLocator, {
       schemaVersion: 1,
       threadId: "thread-account",
       cwd: "/repo",
@@ -1308,7 +1324,7 @@ describe("codex command", () => {
     const deps = createDeps({ safeCodexControlRequest });
 
     const request = await handleCodexCommand(
-      createContext("diagnostics", sessionFile, {
+      createContext("diagnostics", transcriptLocator, {
         accountId: "account-1",
         channelId: "channel-1",
         messageThreadId: "thread-1",
@@ -1321,7 +1337,7 @@ describe("codex command", () => {
 
     await expect(
       handleCodexCommand(
-        createContext(`diagnostics confirm ${token}`, sessionFile, {
+        createContext(`diagnostics confirm ${token}`, transcriptLocator, {
           accountId: "account-2",
           channelId: "channel-1",
           messageThreadId: "thread-1",
@@ -1337,8 +1353,8 @@ describe("codex command", () => {
   });
 
   it("allows private-routed diagnostics confirmations from the owner DM", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
-    await seedCodexBinding(sessionFile, {
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
+    await seedCodexBinding(transcriptLocator, {
       schemaVersion: 1,
       threadId: "thread-private",
       cwd: "/repo",
@@ -1350,7 +1366,7 @@ describe("codex command", () => {
     const deps = createDeps({ safeCodexControlRequest });
 
     const request = await handleCodexCommand(
-      createContext("diagnostics", sessionFile, {
+      createContext("diagnostics", transcriptLocator, {
         accountId: "account-1",
         channelId: "group-channel",
         messageThreadId: "group-topic",
@@ -1393,15 +1409,15 @@ describe("codex command", () => {
   });
 
   it("keeps diagnostics confirmation eviction scoped to account identity", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
-    await seedCodexBinding(sessionFile, {
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
+    await seedCodexBinding(transcriptLocator, {
       schemaVersion: 1,
       threadId: "thread-confirm-scope",
       cwd: "/repo",
     });
 
     const firstRequest = await handleCodexCommand(
-      createContext("diagnostics", sessionFile, {
+      createContext("diagnostics", transcriptLocator, {
         accountId: "account-kept",
         channelId: "channel-kept",
       }),
@@ -1411,7 +1427,7 @@ describe("codex command", () => {
 
     for (let index = 0; index < 100; index += 1) {
       await handleCodexCommand(
-        createContext(`diagnostics ${index}`, sessionFile, {
+        createContext(`diagnostics ${index}`, transcriptLocator, {
           accountId: "account-noisy",
           channelId: "channel-noisy",
         }),
@@ -1421,7 +1437,7 @@ describe("codex command", () => {
 
     await expect(
       handleCodexCommand(
-        createContext(`diagnostics cancel ${firstToken}`, sessionFile, {
+        createContext(`diagnostics cancel ${firstToken}`, transcriptLocator, {
           accountId: "account-kept",
           channelId: "channel-kept",
         }),
@@ -1440,8 +1456,12 @@ describe("codex command", () => {
   });
 
   it("bounds diagnostics notes before upload", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
-    await seedCodexBinding(sessionFile, { schemaVersion: 1, threadId: "thread-789", cwd: "/repo" });
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
+    await seedCodexBinding(transcriptLocator, {
+      schemaVersion: 1,
+      threadId: "thread-789",
+      cwd: "/repo",
+    });
     const safeCodexControlRequest = vi.fn(async () => ({
       ok: true as const,
       value: { threadId: "thread-789" },
@@ -1449,11 +1469,16 @@ describe("codex command", () => {
     const note = "x".repeat(2050);
     const deps = createDeps({ safeCodexControlRequest });
 
-    const request = await handleCodexCommand(createContext(`diagnostics ${note}`, sessionFile), {
+    const request = await handleCodexCommand(
+      createContext(`diagnostics ${note}`, transcriptLocator),
+      {
+        deps,
+      },
+    );
+    const token = readDiagnosticsConfirmationToken(request);
+    await handleCodexCommand(createContext(`diagnostics confirm ${token}`, transcriptLocator), {
       deps,
     });
-    const token = readDiagnosticsConfirmationToken(request);
-    await handleCodexCommand(createContext(`diagnostics confirm ${token}`, sessionFile), { deps });
 
     expect(safeCodexControlRequest).toHaveBeenCalledWith(
       undefined,
@@ -1465,15 +1490,15 @@ describe("codex command", () => {
   });
 
   it("escapes diagnostics notes before showing approval text", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
-    await seedCodexBinding(sessionFile, {
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
+    await seedCodexBinding(transcriptLocator, {
       schemaVersion: 1,
       threadId: "thread-note",
       cwd: "/repo",
     });
 
     const request = await handleCodexCommand(
-      createContext("diagnostics <@U123> [trusted](https://evil) @here `tick`", sessionFile),
+      createContext("diagnostics <@U123> [trusted](https://evil) @here `tick`", transcriptLocator),
       { deps: createDeps() },
     );
 
@@ -1485,8 +1510,8 @@ describe("codex command", () => {
   });
 
   it("throttles repeated diagnostics uploads for the same thread", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
-    await seedCodexBinding(sessionFile, {
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
+    await seedCodexBinding(transcriptLocator, {
       schemaVersion: 1,
       threadId: "thread-cooldown",
       cwd: "/repo",
@@ -1497,12 +1522,17 @@ describe("codex command", () => {
     }));
     const deps = createDeps({ safeCodexControlRequest });
 
-    const request = await handleCodexCommand(createContext("diagnostics first", sessionFile), {
-      deps,
-    });
+    const request = await handleCodexCommand(
+      createContext("diagnostics first", transcriptLocator),
+      {
+        deps,
+      },
+    );
     const token = readDiagnosticsConfirmationToken(request);
     await expect(
-      handleCodexCommand(createContext(`diagnostics confirm ${token}`, sessionFile), { deps }),
+      handleCodexCommand(createContext(`diagnostics confirm ${token}`, transcriptLocator), {
+        deps,
+      }),
     ).resolves.toEqual({
       text: [
         "Codex diagnostics sent to OpenAI servers:",
@@ -1514,7 +1544,7 @@ describe("codex command", () => {
       ].join("\n"),
     });
     await expect(
-      handleCodexCommand(createContext("diagnostics again", sessionFile), { deps }),
+      handleCodexCommand(createContext("diagnostics again", transcriptLocator), { deps }),
     ).resolves.toEqual({
       text: "Codex diagnostics were already sent for thread thread-cooldown recently. Try again in 60s.",
     });
@@ -1527,19 +1557,24 @@ describe("codex command", () => {
       value: {},
     }));
     const deps = createDeps({ safeCodexControlRequest });
-    const sessionFile = path.join(tempDir, "global-cooldown-session.jsonl");
+    const transcriptLocator = path.join(tempDir, "global-cooldown-session.jsonl");
 
-    await seedCodexBinding(sessionFile, {
+    await seedCodexBinding(transcriptLocator, {
       schemaVersion: 1,
       threadId: "thread-global-1",
       cwd: "/repo",
     });
-    const request = await handleCodexCommand(createContext("diagnostics first", sessionFile), {
-      deps,
-    });
+    const request = await handleCodexCommand(
+      createContext("diagnostics first", transcriptLocator),
+      {
+        deps,
+      },
+    );
     const token = readDiagnosticsConfirmationToken(request);
     await expect(
-      handleCodexCommand(createContext(`diagnostics confirm ${token}`, sessionFile), { deps }),
+      handleCodexCommand(createContext(`diagnostics confirm ${token}`, transcriptLocator), {
+        deps,
+      }),
     ).resolves.toEqual({
       text: [
         "Codex diagnostics sent to OpenAI servers:",
@@ -1551,13 +1586,13 @@ describe("codex command", () => {
       ].join("\n"),
     });
 
-    await seedCodexBinding(sessionFile, {
+    await seedCodexBinding(transcriptLocator, {
       schemaVersion: 1,
       threadId: "thread-global-2",
       cwd: "/repo",
     });
     await expect(
-      handleCodexCommand(createContext("diagnostics second", sessionFile), { deps }),
+      handleCodexCommand(createContext("diagnostics second", transcriptLocator), { deps }),
     ).resolves.toEqual({
       text: "Codex diagnostics were already sent for this account or channel recently. Try again in 60s.",
     });
@@ -1571,15 +1606,15 @@ describe("codex command", () => {
       value: {},
     }));
     const deps = createDeps({ safeCodexControlRequest });
-    const sessionFile = path.join(tempDir, "scoped-cooldown-session.jsonl");
+    const transcriptLocator = path.join(tempDir, "scoped-cooldown-session.jsonl");
 
-    await seedCodexBinding(sessionFile, {
+    await seedCodexBinding(transcriptLocator, {
       schemaVersion: 1,
       threadId: "thread-scope-1",
       cwd: "/repo",
     });
     const firstRequest = await handleCodexCommand(
-      createContext("diagnostics first", sessionFile, {
+      createContext("diagnostics first", transcriptLocator, {
         accountId: "account-1",
         channelId: "channel-1",
       }),
@@ -1588,7 +1623,7 @@ describe("codex command", () => {
     const firstToken = readDiagnosticsConfirmationToken(firstRequest);
     await expect(
       handleCodexCommand(
-        createContext(`diagnostics confirm ${firstToken}`, sessionFile, {
+        createContext(`diagnostics confirm ${firstToken}`, transcriptLocator, {
           accountId: "account-1",
           channelId: "channel-1",
         }),
@@ -1598,13 +1633,13 @@ describe("codex command", () => {
       text: expect.stringContaining("Codex diagnostics sent to OpenAI servers:"),
     });
 
-    await seedCodexBinding(sessionFile, {
+    await seedCodexBinding(transcriptLocator, {
       schemaVersion: 1,
       threadId: "thread-scope-2",
       cwd: "/repo",
     });
     const secondRequest = await handleCodexCommand(
-      createContext("diagnostics second", sessionFile, {
+      createContext("diagnostics second", transcriptLocator, {
         accountId: "account-2",
         channelId: "channel-2",
       }),
@@ -1613,7 +1648,7 @@ describe("codex command", () => {
     const secondToken = readDiagnosticsConfirmationToken(secondRequest);
     await expect(
       handleCodexCommand(
-        createContext(`diagnostics confirm ${secondToken}`, sessionFile, {
+        createContext(`diagnostics confirm ${secondToken}`, transcriptLocator, {
           accountId: "account-2",
           channelId: "channel-2",
         }),
@@ -1632,9 +1667,9 @@ describe("codex command", () => {
       value: {},
     }));
     const deps = createDeps({ safeCodexControlRequest });
-    const sessionFile = path.join(tempDir, "delimiter-cooldown-session.jsonl");
+    const transcriptLocator = path.join(tempDir, "delimiter-cooldown-session.jsonl");
 
-    await seedCodexBinding(sessionFile, {
+    await seedCodexBinding(transcriptLocator, {
       schemaVersion: 1,
       threadId: "thread-delimiter-1",
       cwd: "/repo",
@@ -1645,20 +1680,20 @@ describe("codex command", () => {
       channel: "test|channel:x",
     };
     const firstRequest = await handleCodexCommand(
-      createContext("diagnostics first", sessionFile, firstScope),
+      createContext("diagnostics first", transcriptLocator, firstScope),
       { deps },
     );
     const firstToken = readDiagnosticsConfirmationToken(firstRequest);
     await expect(
       handleCodexCommand(
-        createContext(`diagnostics confirm ${firstToken}`, sessionFile, firstScope),
+        createContext(`diagnostics confirm ${firstToken}`, transcriptLocator, firstScope),
         { deps },
       ),
     ).resolves.toMatchObject({
       text: expect.stringContaining("Codex diagnostics sent to OpenAI servers:"),
     });
 
-    await seedCodexBinding(sessionFile, {
+    await seedCodexBinding(transcriptLocator, {
       schemaVersion: 1,
       threadId: "thread-delimiter-2",
       cwd: "/repo",
@@ -1668,13 +1703,13 @@ describe("codex command", () => {
       channel: "test|channel:x",
     };
     const secondRequest = await handleCodexCommand(
-      createContext("diagnostics second", sessionFile, secondScope),
+      createContext("diagnostics second", transcriptLocator, secondScope),
       { deps },
     );
     const secondToken = readDiagnosticsConfirmationToken(secondRequest);
     await expect(
       handleCodexCommand(
-        createContext(`diagnostics confirm ${secondToken}`, sessionFile, secondScope),
+        createContext(`diagnostics confirm ${secondToken}`, transcriptLocator, secondScope),
         { deps },
       ),
     ).resolves.toMatchObject({
@@ -1690,10 +1725,10 @@ describe("codex command", () => {
       value: {},
     }));
     const deps = createDeps({ safeCodexControlRequest });
-    const sessionFile = path.join(tempDir, "long-scope-cooldown-session.jsonl");
+    const transcriptLocator = path.join(tempDir, "long-scope-cooldown-session.jsonl");
     const sharedPrefix = "account-".repeat(40);
 
-    await seedCodexBinding(sessionFile, {
+    await seedCodexBinding(transcriptLocator, {
       schemaVersion: 1,
       threadId: "thread-long-scope-1",
       cwd: "/repo",
@@ -1703,20 +1738,20 @@ describe("codex command", () => {
       channelId: "channel-long",
     };
     const firstRequest = await handleCodexCommand(
-      createContext("diagnostics first", sessionFile, firstScope),
+      createContext("diagnostics first", transcriptLocator, firstScope),
       { deps },
     );
     const firstToken = readDiagnosticsConfirmationToken(firstRequest);
     await expect(
       handleCodexCommand(
-        createContext(`diagnostics confirm ${firstToken}`, sessionFile, firstScope),
+        createContext(`diagnostics confirm ${firstToken}`, transcriptLocator, firstScope),
         { deps },
       ),
     ).resolves.toMatchObject({
       text: expect.stringContaining("Codex diagnostics sent to OpenAI servers:"),
     });
 
-    await seedCodexBinding(sessionFile, {
+    await seedCodexBinding(transcriptLocator, {
       schemaVersion: 1,
       threadId: "thread-long-scope-2",
       cwd: "/repo",
@@ -1726,13 +1761,13 @@ describe("codex command", () => {
       channelId: "channel-long",
     };
     const secondRequest = await handleCodexCommand(
-      createContext("diagnostics second", sessionFile, secondScope),
+      createContext("diagnostics second", transcriptLocator, secondScope),
       { deps },
     );
     const secondToken = readDiagnosticsConfirmationToken(secondRequest);
     await expect(
       handleCodexCommand(
-        createContext(`diagnostics confirm ${secondToken}`, sessionFile, secondScope),
+        createContext(`diagnostics confirm ${secondToken}`, transcriptLocator, secondScope),
         { deps },
       ),
     ).resolves.toMatchObject({
@@ -1743,20 +1778,28 @@ describe("codex command", () => {
   });
 
   it("sanitizes diagnostics upload errors before showing them", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
-    await seedCodexBinding(sessionFile, { schemaVersion: 1, threadId: "<@U123>", cwd: "/repo" });
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
+    await seedCodexBinding(transcriptLocator, {
+      schemaVersion: 1,
+      threadId: "<@U123>",
+      cwd: "/repo",
+    });
     const safeCodexControlRequest = vi.fn(async () => ({
       ok: false as const,
       error: "bad\n\u009b\u202e <@U123> [trusted](https://evil) @here",
     }));
     const deps = createDeps({ safeCodexControlRequest });
 
-    const request = await handleCodexCommand(createContext("diagnostics", sessionFile), { deps });
+    const request = await handleCodexCommand(createContext("diagnostics", transcriptLocator), {
+      deps,
+    });
     expect(request.text).toContain("Codex thread id: &lt;\uff20U123&gt;");
     expect(request.text).not.toContain("<@U123>");
     const token = readDiagnosticsConfirmationToken(request);
     await expect(
-      handleCodexCommand(createContext(`diagnostics confirm ${token}`, sessionFile), { deps }),
+      handleCodexCommand(createContext(`diagnostics confirm ${token}`, transcriptLocator), {
+        deps,
+      }),
     ).resolves.toEqual({
       text: [
         "Could not send Codex diagnostics:",
@@ -1768,8 +1811,8 @@ describe("codex command", () => {
   });
 
   it("does not throttle diagnostics retries after upload failures", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
-    await seedCodexBinding(sessionFile, {
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
+    await seedCodexBinding(transcriptLocator, {
       schemaVersion: 1,
       threadId: "thread-retry",
       cwd: "/repo",
@@ -1780,12 +1823,12 @@ describe("codex command", () => {
       .mockResolvedValueOnce({ ok: true as const, value: { threadId: "thread-retry" } });
     const deps = createDeps({ safeCodexControlRequest });
 
-    const firstRequest = await handleCodexCommand(createContext("diagnostics", sessionFile), {
+    const firstRequest = await handleCodexCommand(createContext("diagnostics", transcriptLocator), {
       deps,
     });
     const firstToken = readDiagnosticsConfirmationToken(firstRequest);
     await expect(
-      handleCodexCommand(createContext(`diagnostics confirm ${firstToken}`, sessionFile), {
+      handleCodexCommand(createContext(`diagnostics confirm ${firstToken}`, transcriptLocator), {
         deps,
       }),
     ).resolves.toEqual({
@@ -1797,12 +1840,15 @@ describe("codex command", () => {
       ].join("\n"),
     });
 
-    const secondRequest = await handleCodexCommand(createContext("diagnostics", sessionFile), {
-      deps,
-    });
+    const secondRequest = await handleCodexCommand(
+      createContext("diagnostics", transcriptLocator),
+      {
+        deps,
+      },
+    );
     const secondToken = readDiagnosticsConfirmationToken(secondRequest);
     await expect(
-      handleCodexCommand(createContext(`diagnostics confirm ${secondToken}`, sessionFile), {
+      handleCodexCommand(createContext(`diagnostics confirm ${secondToken}`, transcriptLocator), {
         deps,
       }),
     ).resolves.toEqual({
@@ -1819,8 +1865,8 @@ describe("codex command", () => {
   });
 
   it("omits inline diagnostics resume commands for unsafe thread ids", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
-    await seedCodexBinding(sessionFile, {
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
+    await seedCodexBinding(transcriptLocator, {
       schemaVersion: 1,
       threadId: "thread-123'`\n\u009b\u202e; echo bad",
       cwd: "/repo",
@@ -1831,10 +1877,14 @@ describe("codex command", () => {
     }));
     const deps = createDeps({ safeCodexControlRequest });
 
-    const request = await handleCodexCommand(createContext("diagnostics", sessionFile), { deps });
+    const request = await handleCodexCommand(createContext("diagnostics", transcriptLocator), {
+      deps,
+    });
     const token = readDiagnosticsConfirmationToken(request);
     await expect(
-      handleCodexCommand(createContext(`diagnostics confirm ${token}`, sessionFile), { deps }),
+      handleCodexCommand(createContext(`diagnostics confirm ${token}`, transcriptLocator), {
+        deps,
+      }),
     ).resolves.toEqual({
       text: [
         "Codex diagnostics sent to OpenAI servers:",
@@ -1848,10 +1898,10 @@ describe("codex command", () => {
   });
 
   it("explains diagnostics when no Codex thread is attached", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
 
     await expect(
-      handleCodexCommand(createContext("diagnostics", sessionFile), { deps: createDeps() }),
+      handleCodexCommand(createContext("diagnostics", transcriptLocator), { deps: createDeps() }),
     ).resolves.toEqual({
       text: [
         "No Codex thread is attached to this OpenClaw session yet.",
@@ -1927,8 +1977,12 @@ describe("codex command", () => {
   });
 
   it("returns sanitized command failures instead of leaking app-server errors", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
-    await seedCodexBinding(sessionFile, { schemaVersion: 1, threadId: "thread-123", cwd: "/repo" });
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
+    await seedCodexBinding(transcriptLocator, {
+      schemaVersion: 1,
+      threadId: "thread-123",
+      cwd: "/repo",
+    });
     const failure = () => {
       throw new Error("app-server failed <@U123> [trusted](https://evil) @here");
     };
@@ -1954,13 +2008,15 @@ describe("codex command", () => {
       ["steer keep going", createDeps({ steerCodexConversationTurn: vi.fn(failure) })],
       ["model gpt-5.4", createDeps({ setCodexConversationModel: vi.fn(failure) })],
     ] as const) {
-      expectSanitizedFailure(await handleCodexCommand(createContext(args, sessionFile), { deps }));
+      expectSanitizedFailure(
+        await handleCodexCommand(createContext(args, transcriptLocator), { deps }),
+      );
     }
   });
 
   it("binds the current conversation to a Codex app-server thread", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
-    await seedCodexBinding(sessionFile, {
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
+    await seedCodexBinding(transcriptLocator, {
       schemaVersion: 1,
       threadId: "thread-123",
       cwd: "/repo",
@@ -1970,7 +2026,7 @@ describe("codex command", () => {
     const startCodexConversationThread = vi.fn(async () => ({
       kind: "codex-app-server-session" as const,
       version: 1 as const,
-      sessionFile,
+      transcriptLocator,
       workspaceDir: "/repo",
     }));
     const requestConversationBinding = vi.fn(async () => ({
@@ -1990,7 +2046,7 @@ describe("codex command", () => {
       handleCodexCommand(
         createContext(
           "bind thread-123 --cwd /repo --model gpt-5.4 --provider openai",
-          sessionFile,
+          transcriptLocator,
           {
             requestConversationBinding,
           },
@@ -2008,7 +2064,7 @@ describe("codex command", () => {
     expect(startCodexConversationThread).toHaveBeenCalledWith({
       pluginConfig: undefined,
       config: {},
-      sessionFile,
+      transcriptLocator,
       workspaceDir: "/repo",
       threadId: "thread-123",
       model: "gpt-5.4",
@@ -2021,18 +2077,18 @@ describe("codex command", () => {
       data: {
         kind: "codex-app-server-session",
         version: 1,
-        sessionFile,
+        transcriptLocator,
         workspaceDir: "/repo",
       },
     });
   });
 
   it("binds quoted workspace paths that contain spaces", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
     const startCodexConversationThread = vi.fn(async () => ({
       kind: "codex-app-server-session" as const,
       version: 1 as const,
-      sessionFile,
+      transcriptLocator,
       workspaceDir: "/repo with space",
     }));
     const requestConversationBinding = vi.fn(async () => ({
@@ -2050,7 +2106,7 @@ describe("codex command", () => {
 
     await expect(
       handleCodexCommand(
-        createContext('bind thread-123 --cwd "/repo with space"', sessionFile, {
+        createContext('bind thread-123 --cwd "/repo with space"', transcriptLocator, {
           requestConversationBinding,
         }),
         {
@@ -2066,7 +2122,7 @@ describe("codex command", () => {
     expect(startCodexConversationThread).toHaveBeenCalledWith({
       pluginConfig: undefined,
       config: {},
-      sessionFile,
+      transcriptLocator,
       workspaceDir: "/repo with space",
       threadId: "thread-123",
       model: undefined,
@@ -2075,13 +2131,13 @@ describe("codex command", () => {
   });
 
   it("escapes bound Codex thread ids and workspace paths before chat display", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
     const unsafeThread = "thread-123 <@U123>";
     const unsafeWorkspace = "/repo [trusted](https://evil)";
     const startCodexConversationThread = vi.fn(async () => ({
       kind: "codex-app-server-session" as const,
       version: 1 as const,
-      sessionFile,
+      transcriptLocator,
       workspaceDir: unsafeWorkspace,
     }));
     const requestConversationBinding = vi.fn(async () => ({
@@ -2098,7 +2154,7 @@ describe("codex command", () => {
     }));
 
     const result = await handleCodexCommand(
-      createContext(`bind "${unsafeThread}" --cwd "${unsafeWorkspace}"`, sessionFile, {
+      createContext(`bind "${unsafeThread}" --cwd "${unsafeWorkspace}"`, transcriptLocator, {
         requestConversationBinding,
       }),
       {
@@ -2122,13 +2178,13 @@ describe("codex command", () => {
   });
 
   it("rejects bind options with missing, blank, or repeated values before starting Codex", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
     const startCodexConversationThread = vi.fn();
     const requestConversationBinding = vi.fn();
 
     await expect(
       handleCodexCommand(
-        createContext("bind thread-123 --cwd --model gpt-5.4", sessionFile, {
+        createContext("bind thread-123 --cwd --model gpt-5.4", transcriptLocator, {
           requestConversationBinding,
         }),
         {
@@ -2143,7 +2199,7 @@ describe("codex command", () => {
     });
     await expect(
       handleCodexCommand(
-        createContext('bind thread-123 --cwd ""', sessionFile, {
+        createContext('bind thread-123 --cwd ""', transcriptLocator, {
           requestConversationBinding,
         }),
         {
@@ -2158,7 +2214,7 @@ describe("codex command", () => {
     });
     await expect(
       handleCodexCommand(
-        createContext("bind thread-123 --cwd /repo --cwd /other", sessionFile, {
+        createContext("bind thread-123 --cwd /repo --cwd /other", transcriptLocator, {
           requestConversationBinding,
         }),
         {
@@ -2192,11 +2248,11 @@ describe("codex command", () => {
   });
 
   it("returns the binding approval reply when conversation bind needs approval", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
     const reply = { text: "Approve this?" };
     await expect(
       handleCodexCommand(
-        createContext("bind", sessionFile, {
+        createContext("bind", transcriptLocator, {
           requestConversationBinding: async () => ({
             status: "pending",
             approvalId: "approval-1",
@@ -2208,7 +2264,7 @@ describe("codex command", () => {
             startCodexConversationThread: vi.fn(async () => ({
               kind: "codex-app-server-session" as const,
               version: 1 as const,
-              sessionFile,
+              transcriptLocator,
               workspaceDir: "/default",
             })),
             resolveCodexDefaultWorkspaceDir: vi.fn(() => "/default"),
@@ -2219,13 +2275,13 @@ describe("codex command", () => {
   });
 
   it("clears the Codex app-server thread binding when conversation bind fails", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
     const sessionKey = "agent:main:codex-bind-failed";
     const clearCodexAppServerBinding = vi.fn(async () => {});
 
     await expect(
       handleCodexCommand(
-        createContext("bind", sessionFile, {
+        createContext("bind", transcriptLocator, {
           sessionKey,
           requestConversationBinding: async () => ({
             status: "error",
@@ -2239,7 +2295,7 @@ describe("codex command", () => {
               kind: "codex-app-server-session" as const,
               version: 1 as const,
               sessionKey,
-              sessionFile,
+              transcriptLocator,
               workspaceDir: "/default",
             })),
             resolveCodexDefaultWorkspaceDir: vi.fn(() => "/default"),
@@ -2249,18 +2305,18 @@ describe("codex command", () => {
     ).resolves.toEqual({
       text: "binding unsupported &lt;\uff20U123&gt; \uff3btrusted\uff3d\uff08https://evil\uff09",
     });
-    expect(clearCodexAppServerBinding).toHaveBeenCalledWith({ sessionKey, sessionFile });
+    expect(clearCodexAppServerBinding).toHaveBeenCalledWith({ sessionKey, transcriptLocator });
   });
 
   it("detaches the current conversation and clears the Codex app-server thread binding", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
     const sessionKey = "agent:main:codex-detach";
     const clearCodexAppServerBinding = vi.fn(async () => {});
     const detachConversationBinding = vi.fn(async () => ({ removed: true }));
 
     await expect(
       handleCodexCommand(
-        createContext("detach", sessionFile, {
+        createContext("detach", transcriptLocator, {
           sessionKey,
           detachConversationBinding,
           getCurrentConversationBinding: async () => ({
@@ -2275,7 +2331,7 @@ describe("codex command", () => {
               kind: "codex-app-server-session",
               version: 1,
               sessionKey,
-              sessionFile,
+              transcriptLocator,
               workspaceDir: "/repo",
             },
           }),
@@ -2287,18 +2343,18 @@ describe("codex command", () => {
     });
     expect(detachConversationBinding).toHaveBeenCalled();
     expect(clearCodexAppServerBinding).toHaveBeenCalledWith(
-      expect.objectContaining({ sessionKey, sessionFile }),
+      expect.objectContaining({ sessionKey, transcriptLocator }),
     );
   });
 
   it("rejects malformed detach commands before clearing bindings", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
     const clearCodexAppServerBinding = vi.fn();
     const detachConversationBinding = vi.fn();
 
     await expect(
       handleCodexCommand(
-        createContext("detach now", sessionFile, {
+        createContext("detach now", transcriptLocator, {
           detachConversationBinding,
         }),
         { deps: createDeps({ clearCodexAppServerBinding }) },
@@ -2311,29 +2367,29 @@ describe("codex command", () => {
   });
 
   it("stops the active bound Codex turn", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
     const stopCodexConversationTurn = vi.fn(async () => ({
       stopped: true,
       message: "Codex stop requested.",
     }));
 
     await expect(
-      handleCodexCommand(createContext("stop", sessionFile), {
+      handleCodexCommand(createContext("stop", transcriptLocator), {
         deps: createDeps({ stopCodexConversationTurn }),
       }),
     ).resolves.toEqual({ text: "Codex stop requested." });
     expect(stopCodexConversationTurn).toHaveBeenCalledWith({
-      sessionFile,
+      transcriptLocator,
       pluginConfig: undefined,
     });
   });
 
   it("rejects malformed stop commands before interrupting Codex", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
     const stopCodexConversationTurn = vi.fn();
 
     await expect(
-      handleCodexCommand(createContext("stop now", sessionFile), {
+      handleCodexCommand(createContext("stop now", transcriptLocator), {
         deps: createDeps({ stopCodexConversationTurn }),
       }),
     ).resolves.toEqual({ text: "Usage: /codex stop" });
@@ -2341,26 +2397,26 @@ describe("codex command", () => {
   });
 
   it("steers the active bound Codex turn", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
     const steerCodexConversationTurn = vi.fn(async () => ({
       steered: true,
       message: "Sent steer message to Codex.",
     }));
 
     await expect(
-      handleCodexCommand(createContext("steer focus tests first", sessionFile), {
+      handleCodexCommand(createContext("steer focus tests first", transcriptLocator), {
         deps: createDeps({ steerCodexConversationTurn }),
       }),
     ).resolves.toEqual({ text: "Sent steer message to Codex." });
     expect(steerCodexConversationTurn).toHaveBeenCalledWith({
-      sessionFile,
+      transcriptLocator,
       pluginConfig: undefined,
       message: "focus tests first",
     });
   });
 
   it("sets per-binding model, fast mode, and permissions", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
     const setCodexConversationModel = vi.fn(async () => "Codex model set to gpt-5.4.");
     const setCodexConversationFastMode = vi.fn(async () => "Codex fast mode enabled.");
     const setCodexConversationPermissions = vi.fn(
@@ -2373,42 +2429,42 @@ describe("codex command", () => {
     });
 
     await expect(
-      handleCodexCommand(createContext("model gpt-5.4", sessionFile), { deps }),
+      handleCodexCommand(createContext("model gpt-5.4", transcriptLocator), { deps }),
     ).resolves.toEqual({ text: "Codex model set to gpt-5.4." });
     await expect(
-      handleCodexCommand(createContext("fast on", sessionFile), { deps }),
+      handleCodexCommand(createContext("fast on", transcriptLocator), { deps }),
     ).resolves.toEqual({ text: "Codex fast mode enabled." });
     await expect(
-      handleCodexCommand(createContext("permissions yolo", sessionFile), { deps }),
+      handleCodexCommand(createContext("permissions yolo", transcriptLocator), { deps }),
     ).resolves.toEqual({ text: "Codex permissions set to full access." });
 
     expect(setCodexConversationModel).toHaveBeenCalledWith({
-      sessionFile,
+      transcriptLocator,
       pluginConfig: undefined,
       model: "gpt-5.4",
     });
     expect(setCodexConversationFastMode).toHaveBeenCalledWith({
-      sessionFile,
+      transcriptLocator,
       pluginConfig: undefined,
       enabled: true,
     });
     expect(setCodexConversationPermissions).toHaveBeenCalledWith({
-      sessionFile,
+      transcriptLocator,
       pluginConfig: undefined,
       mode: "yolo",
     });
   });
 
   it("escapes current bound model status before chat display", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
-    await seedCodexBinding(sessionFile, {
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
+    await seedCodexBinding(transcriptLocator, {
       schemaVersion: 1,
       threadId: "thread-model",
       cwd: "/repo",
       model: "model_<@U123>_[trusted](https://evil)",
     });
 
-    const result = await handleCodexCommand(createContext("model", sessionFile), {
+    const result = await handleCodexCommand(createContext("model", transcriptLocator), {
       deps: createDeps(),
     });
 
@@ -2420,11 +2476,11 @@ describe("codex command", () => {
   });
 
   it("rejects malformed model commands before persisting the model", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
     const setCodexConversationModel = vi.fn();
 
     await expect(
-      handleCodexCommand(createContext("model gpt-5.4 extra", sessionFile), {
+      handleCodexCommand(createContext("model gpt-5.4 extra", transcriptLocator), {
         deps: createDeps({ setCodexConversationModel }),
       }),
     ).resolves.toEqual({ text: "Usage: /codex model <model>" });
@@ -2432,7 +2488,7 @@ describe("codex command", () => {
   });
 
   it("rejects extra fast and permissions arguments", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
     const setCodexConversationFastMode = vi.fn();
     const setCodexConversationPermissions = vi.fn();
     const deps = createDeps({
@@ -2441,10 +2497,10 @@ describe("codex command", () => {
     });
 
     await expect(
-      handleCodexCommand(createContext("fast on now", sessionFile), { deps }),
+      handleCodexCommand(createContext("fast on now", transcriptLocator), { deps }),
     ).resolves.toEqual({ text: "Usage: /codex fast [on|off|status]" });
     await expect(
-      handleCodexCommand(createContext("permissions yolo now", sessionFile), { deps }),
+      handleCodexCommand(createContext("permissions yolo now", transcriptLocator), { deps }),
     ).resolves.toEqual({ text: "Usage: /codex permissions [default|yolo|status]" });
 
     expect(setCodexConversationFastMode).not.toHaveBeenCalled();
@@ -2477,13 +2533,13 @@ describe("codex command", () => {
   });
 
   it("uses current plugin binding data for follow-up control commands", async () => {
-    const hostSessionFile = path.join(tempDir, "host-session.jsonl");
-    const pluginSessionFile = path.join(tempDir, "plugin-session.jsonl");
+    const hostTranscriptLocator = path.join(tempDir, "host-session.jsonl");
+    const pluginTranscriptLocator = path.join(tempDir, "plugin-session.jsonl");
     const setCodexConversationFastMode = vi.fn(async () => "Codex fast mode enabled.");
 
     await expect(
       handleCodexCommand(
-        createContext("fast on", pluginSessionFile, {
+        createContext("fast on", pluginTranscriptLocator, {
           getCurrentConversationBinding: async () => ({
             bindingId: "binding-1",
             pluginId: "codex",
@@ -2495,7 +2551,7 @@ describe("codex command", () => {
             data: {
               kind: "codex-app-server-session",
               version: 1,
-              sessionFile: hostSessionFile,
+              transcriptLocator: hostTranscriptLocator,
               workspaceDir: tempDir,
             },
           }),
@@ -2509,16 +2565,16 @@ describe("codex command", () => {
     ).resolves.toEqual({ text: "Codex fast mode enabled." });
 
     expect(setCodexConversationFastMode).toHaveBeenCalledWith({
-      sessionFile: hostSessionFile,
+      transcriptLocator: hostTranscriptLocator,
       pluginConfig: undefined,
       enabled: true,
     });
   });
 
   it("describes active binding preferences", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
     const sessionKey = "agent:main:codex-binding";
-    await seedCodexBinding(sessionFile, {
+    await seedCodexBinding(transcriptLocator, {
       schemaVersion: 1,
       threadId: "thread-123",
       cwd: "/repo",
@@ -2530,7 +2586,7 @@ describe("codex command", () => {
 
     await expect(
       handleCodexCommand(
-        createContext("binding", sessionFile, {
+        createContext("binding", transcriptLocator, {
           sessionKey,
           getCurrentConversationBinding: async () => ({
             bindingId: "binding-1",
@@ -2544,7 +2600,7 @@ describe("codex command", () => {
               kind: "codex-app-server-session",
               version: 1,
               sessionKey,
-              sessionFile,
+              transcriptLocator,
               workspaceDir: "/repo",
             },
           }),
@@ -2553,7 +2609,7 @@ describe("codex command", () => {
           deps: createDeps({
             readCodexConversationActiveTurn: vi.fn(() => ({
               sessionKey,
-              sessionFile,
+              transcriptLocator,
               threadId: "thread-123",
               turnId: "turn-1",
             })),
@@ -2575,8 +2631,8 @@ describe("codex command", () => {
   });
 
   it("escapes active binding fields before chat display", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
-    await seedCodexBinding(sessionFile, {
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
+    await seedCodexBinding(transcriptLocator, {
       schemaVersion: 1,
       threadId: "thread-123 <@U123>",
       cwd: "/repo",
@@ -2584,7 +2640,7 @@ describe("codex command", () => {
     });
 
     const result = await handleCodexCommand(
-      createContext("binding", sessionFile, {
+      createContext("binding", transcriptLocator, {
         getCurrentConversationBinding: async () => ({
           bindingId: "binding-1",
           pluginId: "codex",
@@ -2596,7 +2652,7 @@ describe("codex command", () => {
           data: {
             kind: "codex-app-server-session",
             version: 1,
-            sessionFile,
+            transcriptLocator,
             workspaceDir: "/repo <@U123>",
           },
         }),

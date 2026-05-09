@@ -816,7 +816,7 @@ export async function runPreparedReply(
   const resolvePreparedSessionState = (): {
     sessionEntry: SessionEntry | undefined;
     sessionId: string;
-    sessionFile: string;
+    transcriptLocator: string;
   } => {
     const latestSessionEntry =
       sessionStore && sessionKey
@@ -829,7 +829,7 @@ export async function runPreparedReply(
     return {
       sessionEntry: latestSessionEntry,
       sessionId: latestSessionId,
-      sessionFile: createSqliteSessionTranscriptLocator({
+      transcriptLocator: createSqliteSessionTranscriptLocator({
         agentId,
         sessionId: latestSessionId,
       }),
@@ -1018,7 +1018,7 @@ export async function runPreparedReply(
       traceAuthorized:
         (forceSenderIsOwnerFalseFromSystemEvents ? false : command.senderIsOwner) ||
         (ctx.GatewayClientScopes ?? []).includes("operator.admin"),
-      sessionFile: preparedSessionState.sessionFile,
+      transcriptLocator: preparedSessionState.transcriptLocator,
       workspaceDir,
       config: cfg,
       skillsSnapshot,

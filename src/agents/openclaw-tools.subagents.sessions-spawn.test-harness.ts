@@ -200,7 +200,7 @@ export async function getSessionsSpawnTool(opts: CreateOpenClawToolsOpts) {
     }),
     forkSessionFromParent: async () => ({
       sessionId: "forked-session-id",
-      sessionFile: "sqlite-transcript://main/forked-session.jsonl",
+      transcriptLocator: "sqlite-transcript://main/forked-session.jsonl",
     }),
   });
   cachedSubagentRegistryTesting.setDepsForTest({

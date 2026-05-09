@@ -254,7 +254,7 @@ export const handleTtsCommands: CommandHandler = async (params, allowTextCommand
       };
     }
     const latest = await readLatestAssistantTextFromSessionTranscript(
-      params.sessionEntry.sessionFile,
+      params.sessionEntry.transcriptLocator,
       {
         agentId: params.agentId,
         sessionId: params.sessionEntry.sessionId,

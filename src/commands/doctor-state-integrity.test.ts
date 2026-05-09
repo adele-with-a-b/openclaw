@@ -549,7 +549,7 @@ describe("doctor state integrity oauth dir checks", () => {
     await writeSessionStore(cfg, {
       "agent:main:main": {
         sessionId: "heartbeat-session",
-        sessionFile: heartbeatTranscriptPath,
+        transcriptLocator: heartbeatTranscriptPath,
         updatedAt: Date.now(),
       },
     });

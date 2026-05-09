@@ -9,7 +9,7 @@ import type { HandleCommandsParams } from "./commands-types.js";
 export interface ExportCommandSessionTarget {
   agentId: string;
   entry: SessionEntry;
-  sessionFile: string;
+  transcriptLocator: string;
 }
 
 const MAX_EXPORT_COMMAND_OUTPUT_PATH_CHARS = 512;
@@ -50,11 +50,11 @@ export function resolveExportCommandSessionTarget(
   }
 
   try {
-    const sessionFile = createSqliteSessionTranscriptLocator({
+    const transcriptLocator = createSqliteSessionTranscriptLocator({
       agentId: targetAgentId,
       sessionId: entry.sessionId,
     });
-    return { agentId: targetAgentId, entry, sessionFile };
+    return { agentId: targetAgentId, entry, transcriptLocator };
   } catch (err) {
     return {
       text: `❌ Failed to resolve session transcript: ${formatErrorMessage(err)}`,

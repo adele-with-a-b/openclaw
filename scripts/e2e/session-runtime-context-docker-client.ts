@@ -112,7 +112,7 @@ async function verifyRuntimeContextTranscriptShape() {
 
 async function seedBrokenLegacySessionForDoctorMigration(stateDir: string): Promise<string> {
   const sessionsDir = path.join(stateDir, "agents", "main", "sessions");
-  const sessionFile = path.join(sessionsDir, "broken.jsonl");
+  const transcriptLocator = path.join(sessionsDir, "broken.jsonl");
   await fs.mkdir(sessionsDir, { recursive: true });
   const entries = [
     { type: "session", version: 3, id: "broken-session" },
@@ -157,7 +157,7 @@ async function seedBrokenLegacySessionForDoctorMigration(stateDir: string): Prom
     },
   ];
   await fs.writeFile(
-    sessionFile,
+    transcriptLocator,
     `${entries.map((entry) => JSON.stringify(entry)).join("\n")}\n`,
     "utf-8",
   );
@@ -169,7 +169,7 @@ async function seedBrokenLegacySessionForDoctorMigration(stateDir: string): Prom
       {
         "agent:main:qa:docker-runtime-context": {
           sessionId: "broken",
-          sessionFile: "broken.jsonl",
+          transcriptLocator: "broken.jsonl",
           updatedAt: Date.now(),
           displayName: "Docker runtime context repair",
         },
@@ -179,13 +179,13 @@ async function seedBrokenLegacySessionForDoctorMigration(stateDir: string): Prom
     ),
     "utf-8",
   );
-  return sessionFile;
+  return transcriptLocator;
 }
 
 async function verifyDoctorRepair(root: string) {
   const stateDir = path.join(root, ".openclaw");
   const configPath = path.join(stateDir, "openclaw.json");
-  const sessionFile = await seedBrokenLegacySessionForDoctorMigration(stateDir);
+  const transcriptLocator = await seedBrokenLegacySessionForDoctorMigration(stateDir);
   await fs.mkdir(path.dirname(configPath), { recursive: true });
   await fs.writeFile(configPath, JSON.stringify({ plugins: { enabled: false } }, null, 2));
 
@@ -216,7 +216,7 @@ async function verifyDoctorRepair(root: string) {
     result.status === 0,
     `doctor --fix failed\nstdout:\n${result.stdout}\nstderr:\n${result.stderr}`,
   );
-  await fs.access(sessionFile).then(
+  await fs.access(transcriptLocator).then(
     () => {
       throw new Error("doctor left legacy transcript JSONL after SQLite import");
     },

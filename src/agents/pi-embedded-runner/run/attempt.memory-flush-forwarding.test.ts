@@ -13,7 +13,7 @@ function createAttemptParams(workspaceDir: string) {
   return {
     sessionId: "session-memory-flush",
     sessionKey: "agent:main",
-    sessionFile: "sqlite-transcript://main/session-memory-flush.jsonl",
+    transcriptLocator: "sqlite-transcript://main/session-memory-flush.jsonl",
     workspaceDir,
     prompt: "flush durable notes",
     timeoutMs: 30_000,

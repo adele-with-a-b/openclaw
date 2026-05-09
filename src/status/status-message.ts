@@ -264,7 +264,7 @@ const readUsageFromSessionLog = (
       agentId ?? (sessionKey ? resolveAgentIdFromSessionKey(sessionKey) : undefined);
     const snapshot = readRecentSessionUsageFromTranscript(
       sessionId,
-      sessionEntry?.sessionFile,
+      sessionEntry?.transcriptLocator,
       resolvedAgentId,
       256 * 1024,
     );

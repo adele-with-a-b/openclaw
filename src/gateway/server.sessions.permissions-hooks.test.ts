@@ -26,7 +26,7 @@ test("webchat clients cannot patch, delete, compact, or restore sessions", async
   await seedGatewaySessionEntries({
     entries: {
       main: sessionStoreEntry(fixture.sessionId, {
-        sessionFile: fixture.sessionFile,
+        transcriptLocator: fixture.transcriptLocator,
         compactionCheckpoints: [
           {
             checkpointId: "checkpoint-1",
@@ -40,12 +40,12 @@ test("webchat clients cannot patch, delete, compact, or restore sessions", async
             firstKeptEntryId: fixture.preCompactionLeafId,
             preCompaction: {
               sessionId: fixture.preCompactionSessionId,
-              sessionFile: fixture.preCompactionSessionFile,
+              transcriptLocator: fixture.preCompactionTranscriptLocator,
               leafId: fixture.preCompactionLeafId,
             },
             postCompaction: {
               sessionId: fixture.sessionId,
-              sessionFile: fixture.sessionFile,
+              transcriptLocator: fixture.transcriptLocator,
               leafId: fixture.postCompactionLeafId,
               entryId: fixture.postCompactionLeafId,
             },

@@ -300,7 +300,7 @@ describe("SQLite transcript readers", () => {
     expect(result[1]?.text).toContain("call weather");
   });
 
-  test("resolves stored transcript scope from sessionFile metadata", () => {
+  test("resolves stored transcript scope from transcriptLocator metadata", () => {
     setupState();
     const sessionId = "cross-agent";
     const filePath = transcriptPath(sessionId, "ops");

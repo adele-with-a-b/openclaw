@@ -40,7 +40,7 @@ async function createFixture() {
   });
   const entry = {
     sessionId: "s1",
-    sessionFile: transcriptPath,
+    transcriptLocator: transcriptPath,
     updatedAt: Date.now(),
     compactionCount: 0,
   } as SessionEntry;
@@ -111,7 +111,7 @@ describe("session-updates lifecycle hooks", () => {
       sessionKey,
       reason: "compaction",
     });
-    expect(endEvent?.sessionFile).toBe(
+    expect(endEvent?.transcriptLocator).toBe(
       createSqliteSessionTranscriptLocator({ agentId: "main", sessionId: "s1" }),
     );
     expect(endContext).toMatchObject({
@@ -141,7 +141,7 @@ describe("session-updates lifecycle hooks", () => {
     }
     process.env.OPENCLAW_STATE_DIR = root;
     const sessionKey = "agent:main:forum:direct:compaction:topic:456";
-    const sessionFile = createSqliteSessionTranscriptLocator({
+    const transcriptLocator = createSqliteSessionTranscriptLocator({
       agentId: "main",
       sessionId: "s1",
       topicId: 456,
@@ -149,12 +149,12 @@ describe("session-updates lifecycle hooks", () => {
     replaceSqliteSessionTranscriptEvents({
       agentId: "main",
       sessionId: "s1",
-      transcriptPath: sessionFile,
+      transcriptPath: transcriptLocator,
       events: [{ type: "message" }],
     });
     const entry = {
       sessionId: "s1",
-      sessionFile,
+      transcriptLocator,
       updatedAt: Date.now(),
       compactionCount: 0,
     } as SessionEntry;
@@ -177,10 +177,10 @@ describe("session-updates lifecycle hooks", () => {
       sessionId: "s2",
       topicId: 456,
     });
-    expect(sessionStore[sessionKey]?.sessionFile).toBe(expectedNextFile);
-    expect(sessionStore[sessionKey]?.sessionFile).toContain("sqlite-transcript://");
-    expect(sessionStore[sessionKey]?.sessionFile).not.toMatch(/^sqlite-transcript:\/[^/]/u);
+    expect(sessionStore[sessionKey]?.transcriptLocator).toBe(expectedNextFile);
+    expect(sessionStore[sessionKey]?.transcriptLocator).toContain("sqlite-transcript://");
+    expect(sessionStore[sessionKey]?.transcriptLocator).not.toMatch(/^sqlite-transcript:\/[^/]/u);
     const [endEvent] = hookRunnerMocks.runSessionEnd.mock.calls[0] ?? [];
-    expect(endEvent?.sessionFile).toBe(sessionFile);
+    expect(endEvent?.transcriptLocator).toBe(transcriptLocator);
   });
 });

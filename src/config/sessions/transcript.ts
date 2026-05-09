@@ -21,7 +21,7 @@ import {
 import type { SessionEntry } from "./types.js";
 
 export type SessionTranscriptAppendResult =
-  | { ok: true; sessionFile: string; messageId: string }
+  | { ok: true; transcriptLocator: string; messageId: string }
   | { ok: false; reason: string };
 
 export type SessionTranscriptUpdateMode = "inline" | "signal-only" | "none";
@@ -105,11 +105,11 @@ export async function resolveSessionTranscriptTarget(params: {
   sessionStore?: Record<string, SessionEntry>;
   agentId: string;
   threadId?: string | number;
-}): Promise<{ sessionFile: string; sessionEntry: SessionEntry | undefined }> {
+}): Promise<{ transcriptLocator: string; sessionEntry: SessionEntry | undefined }> {
   let sessionEntry = params.sessionEntry;
 
   const threadIdFromSessionKey = parseSessionThreadInfo(params.sessionKey).threadId;
-  const fallbackTranscriptLocator = !sessionEntry?.sessionFile
+  const fallbackTranscriptLocator = !sessionEntry?.transcriptLocator
     ? createSqliteSessionTranscriptLocator({
         sessionId: params.sessionId,
         agentId: params.agentId,
@@ -123,23 +123,23 @@ export async function resolveSessionTranscriptTarget(params: {
     agentId: params.agentId,
     fallbackTranscriptLocator,
   });
-  const sessionFile = resolvedTranscript.transcriptLocator;
+  const transcriptLocator = resolvedTranscript.transcriptLocator;
   sessionEntry = resolvedTranscript.sessionEntry;
   if (params.sessionStore) {
     params.sessionStore[params.sessionKey] = sessionEntry;
   }
 
   return {
-    sessionFile,
+    transcriptLocator,
     sessionEntry,
   };
 }
 
 export async function readLatestAssistantTextFromSessionTranscript(
-  sessionFile: string | undefined,
+  transcriptLocator: string | undefined,
   scope?: TranscriptQueryScope,
 ): Promise<LatestAssistantTranscriptText | undefined> {
-  const scopedEvents = loadScopedSqliteTranscriptEvents(scope, sessionFile);
+  const scopedEvents = loadScopedSqliteTranscriptEvents(scope, transcriptLocator);
   if (scopedEvents) {
     for (const event of scopedEvents.toReversed()) {
       const assistantText = parseAssistantTranscriptEventText(event);
@@ -154,10 +154,10 @@ export async function readLatestAssistantTextFromSessionTranscript(
 }
 
 export async function readTailAssistantTextFromSessionTranscript(
-  sessionFile: string | undefined,
+  transcriptLocator: string | undefined,
   scope?: TranscriptQueryScope,
 ): Promise<TailAssistantTranscriptText | undefined> {
-  const scopedEvents = loadScopedSqliteTranscriptEvents(scope, sessionFile);
+  const scopedEvents = loadScopedSqliteTranscriptEvents(scope, transcriptLocator);
   if (scopedEvents) {
     const tail = scopedEvents.at(-1);
     return tail === undefined ? undefined : parseAssistantTranscriptEventText(tail);
@@ -245,7 +245,7 @@ export async function appendExactAssistantMessageToSessionTranscript(params: {
     return { ok: false, reason: `unknown sessionKey: ${sessionKey}` };
   }
 
-  let sessionFile: string;
+  let transcriptLocator: string;
   try {
     const resolvedTranscript = await resolveAndPersistSessionTranscriptLocator({
       sessionId: entry.sessionId,
@@ -253,7 +253,7 @@ export async function appendExactAssistantMessageToSessionTranscript(params: {
       sessionEntry: entry,
       agentId,
     });
-    sessionFile = resolvedTranscript.transcriptLocator;
+    transcriptLocator = resolvedTranscript.transcriptLocator;
   } catch (err) {
     return {
       ok: false,
@@ -270,10 +270,14 @@ export async function appendExactAssistantMessageToSessionTranscript(params: {
   };
 
   const latestEquivalentAssistantId = isRedundantDeliveryMirror(params.message)
-    ? await findLatestEquivalentAssistantMessageId(sessionFile, params.message, transcriptScope)
+    ? await findLatestEquivalentAssistantMessageId(
+        transcriptLocator,
+        params.message,
+        transcriptScope,
+      )
     : undefined;
   if (latestEquivalentAssistantId) {
-    return { ok: true, sessionFile, messageId: latestEquivalentAssistantId };
+    return { ok: true, transcriptLocator, messageId: latestEquivalentAssistantId };
   }
 
   const message = {
@@ -281,7 +285,7 @@ export async function appendExactAssistantMessageToSessionTranscript(params: {
     ...(explicitIdempotencyKey ? { idempotencyKey: explicitIdempotencyKey } : {}),
   };
   const { messageId } = await appendSessionTranscriptMessage({
-    transcriptPath: sessionFile,
+    transcriptPath: transcriptLocator,
     agentId,
     message,
     sessionId: entry.sessionId,
@@ -293,7 +297,7 @@ export async function appendExactAssistantMessageToSessionTranscript(params: {
       emitSessionTranscriptUpdate({
         agentId,
         sessionId: entry.sessionId,
-        sessionFile,
+        transcriptLocator: transcriptLocator,
         sessionKey,
         message,
         messageId,
@@ -303,14 +307,14 @@ export async function appendExactAssistantMessageToSessionTranscript(params: {
       emitSessionTranscriptUpdate({
         agentId,
         sessionId: entry.sessionId,
-        sessionFile,
+        transcriptLocator: transcriptLocator,
         sessionKey,
       });
       break;
     case "none":
       break;
   }
-  return { ok: true, sessionFile, messageId };
+  return { ok: true, transcriptLocator, messageId };
 }
 
 function isRedundantDeliveryMirror(message: SessionTranscriptAssistantMessage): boolean {

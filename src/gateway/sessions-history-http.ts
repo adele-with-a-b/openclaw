@@ -157,7 +157,7 @@ export async function handleSessionHistoryHttpRequest(
       : DEFAULT_CHAT_HISTORY_TEXT_MAX_CHARS;
   const boundedSnapshot =
     cursor === undefined && typeof limit === "number"
-      ? await readRecentSessionMessagesWithStatsAsync(entry.sessionId, entry.sessionFile, {
+      ? await readRecentSessionMessagesWithStatsAsync(entry.sessionId, entry.transcriptLocator, {
           ...resolveSessionHistoryTailReadOptions(limit),
           agentId: target.agentId,
         })
@@ -167,7 +167,7 @@ export async function handleSessionHistoryHttpRequest(
   const rawSnapshot =
     boundedSnapshot?.messages ??
     (entry?.sessionId
-      ? await readSessionMessagesAsync(entry.sessionId, entry.sessionFile, {
+      ? await readSessionMessagesAsync(entry.sessionId, entry.transcriptLocator, {
           agentId: target.agentId,
           mode: "full",
           reason: "session history cursor pagination",
@@ -193,7 +193,7 @@ export async function handleSessionHistoryHttpRequest(
 
   const transcriptCandidates = entry?.sessionId
     ? new Set(
-        resolveSessionTranscriptCandidates(entry.sessionId, entry.sessionFile, target.agentId)
+        resolveSessionTranscriptCandidates(entry.sessionId, entry.transcriptLocator, target.agentId)
           .map((candidate) => canonicalizePath(candidate))
           .filter((candidate): candidate is string => typeof candidate === "string"),
       )
@@ -204,7 +204,7 @@ export async function handleSessionHistoryHttpRequest(
     target: {
       agentId: target.agentId,
       sessionId: entry.sessionId,
-      sessionFile: entry.sessionFile,
+      transcriptLocator: entry.transcriptLocator,
     },
     rawMessages: rawSnapshot,
     rawTranscriptSeq: boundedSnapshot?.totalMessages,
@@ -305,7 +305,7 @@ export async function handleSessionHistoryHttpRequest(
     if (!entry?.sessionId) {
       return;
     }
-    const updatePath = canonicalizePath(update.sessionFile);
+    const updatePath = canonicalizePath(update.transcriptLocator);
     if (!updatePath || !transcriptCandidates.has(updatePath)) {
       return;
     }

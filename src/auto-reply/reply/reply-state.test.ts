@@ -54,9 +54,9 @@ async function createCompactionSessionFixture(entry: SessionEntry) {
   return { transcriptDir, sessionKey, sessionStore };
 }
 
-async function rotateCompactionSessionFile(params: {
+async function rotateCompactionTranscriptLocator(params: {
   tempPrefix: string;
-  sessionFile: (transcriptDir: string) => string;
+  transcriptLocator: (transcriptDir: string) => string;
   newSessionId: string;
 }) {
   const tmp = await fs.mkdtemp(path.join(os.tmpdir(), params.tempPrefix));
@@ -66,7 +66,7 @@ async function rotateCompactionSessionFile(params: {
   const sessionKey = "main";
   const entry = {
     sessionId: "s1",
-    sessionFile: params.sessionFile(transcriptDir),
+    transcriptLocator: params.transcriptLocator(transcriptDir),
     updatedAt: Date.now(),
     compactionCount: 0,
   } as SessionEntry;
@@ -552,37 +552,37 @@ describe("incrementCompactionCount", () => {
   });
 
   it("updates sessionId and uses sqlite locator when compaction rotated transcripts", async () => {
-    const { stored, sessionKey } = await rotateCompactionSessionFile({
+    const { stored, sessionKey } = await rotateCompactionTranscriptLocator({
       tempPrefix: "openclaw-compact-rotate-",
-      sessionFile: (tmp) => path.join(tmp, "s1-topic-456.jsonl"),
+      transcriptLocator: (tmp) => path.join(tmp, "s1-topic-456.jsonl"),
       newSessionId: "s2",
     });
     expect(stored[sessionKey].sessionId).toBe("s2");
-    expect(stored[sessionKey].sessionFile).toBe(
+    expect(stored[sessionKey].transcriptLocator).toBe(
       createSqliteSessionTranscriptLocator({ agentId: "main", sessionId: "s2" }),
     );
   });
 
   it("drops legacy fork transcript filenames when compaction rotates transcripts", async () => {
-    const { stored, sessionKey } = await rotateCompactionSessionFile({
+    const { stored, sessionKey } = await rotateCompactionTranscriptLocator({
       tempPrefix: "openclaw-compact-fork-",
-      sessionFile: (tmp) => path.join(tmp, "2026-03-23T12-34-56-789Z_s1.jsonl"),
+      transcriptLocator: (tmp) => path.join(tmp, "2026-03-23T12-34-56-789Z_s1.jsonl"),
       newSessionId: "s2",
     });
     expect(stored[sessionKey].sessionId).toBe("s2");
-    expect(stored[sessionKey].sessionFile).toBe(
+    expect(stored[sessionKey].transcriptLocator).toBe(
       createSqliteSessionTranscriptLocator({ agentId: "main", sessionId: "s2" }),
     );
   });
 
-  it("replaces absolute sessionFile paths with sqlite locators during compaction rotation", async () => {
-    const { stored, sessionKey } = await rotateCompactionSessionFile({
+  it("replaces absolute transcriptLocator paths with sqlite locators during compaction rotation", async () => {
+    const { stored, sessionKey } = await rotateCompactionTranscriptLocator({
       tempPrefix: "openclaw-compact-unsafe-",
-      sessionFile: (tmp) => path.join(tmp, "outside", "s1.jsonl"),
+      transcriptLocator: (tmp) => path.join(tmp, "outside", "s1.jsonl"),
       newSessionId: "s2",
     });
     expect(stored[sessionKey].sessionId).toBe("s2");
-    expect(stored[sessionKey].sessionFile).toBe(
+    expect(stored[sessionKey].transcriptLocator).toBe(
       createSqliteSessionTranscriptLocator({ agentId: "main", sessionId: "s2" }),
     );
   });
@@ -603,15 +603,15 @@ describe("incrementCompactionCount", () => {
     expect(stored[sessionKey].compactionCount).toBe(4);
   });
 
-  it("updates sessionId and sessionFile when newSessionId is provided", async () => {
+  it("updates sessionId and transcriptLocator when newSessionId is provided", async () => {
     const entry = {
       sessionId: "old-session-id",
-      sessionFile: "old-session-id.jsonl",
+      transcriptLocator: "old-session-id.jsonl",
       updatedAt: Date.now(),
       compactionCount: 1,
     } as SessionEntry;
     const { transcriptDir, sessionKey, sessionStore } = await createCompactionSessionFixture(entry);
-    entry.sessionFile = path.join(transcriptDir, "old-session-id.jsonl");
+    entry.transcriptLocator = path.join(transcriptDir, "old-session-id.jsonl");
     sessionStore[sessionKey] = entry;
 
     await incrementCompactionCount({
@@ -623,16 +623,16 @@ describe("incrementCompactionCount", () => {
 
     const stored = readStoredMainAgentSessionRows();
     expect(stored[sessionKey].sessionId).toBe("new-session-id");
-    expect(stored[sessionKey].sessionFile).toBe(
+    expect(stored[sessionKey].transcriptLocator).toBe(
       createSqliteSessionTranscriptLocator({ agentId: "main", sessionId: "new-session-id" }),
     );
     expect(stored[sessionKey].compactionCount).toBe(2);
   });
 
-  it("does not update sessionFile when newSessionId matches current sessionId", async () => {
+  it("does not update transcriptLocator when newSessionId matches current sessionId", async () => {
     const entry = {
       sessionId: "same-id",
-      sessionFile: "same-id.jsonl",
+      transcriptLocator: "same-id.jsonl",
       updatedAt: Date.now(),
       compactionCount: 0,
     } as SessionEntry;
@@ -647,31 +647,31 @@ describe("incrementCompactionCount", () => {
 
     const stored = readStoredMainAgentSessionRows();
     expect(stored[sessionKey].sessionId).toBe("same-id");
-    expect(stored[sessionKey].sessionFile).toBe("same-id.jsonl");
+    expect(stored[sessionKey].transcriptLocator).toBe("same-id.jsonl");
     expect(stored[sessionKey].compactionCount).toBe(1);
   });
 
-  it("updates sessionFile when rotation keeps the same sessionId", async () => {
+  it("updates transcriptLocator when rotation keeps the same sessionId", async () => {
     const entry = {
       sessionId: "same-id",
-      sessionFile: "same-id.jsonl",
+      transcriptLocator: "same-id.jsonl",
       updatedAt: Date.now(),
       compactionCount: 0,
     } as SessionEntry;
     const { transcriptDir, sessionKey, sessionStore } = await createCompactionSessionFixture(entry);
-    const rotatedSessionFile = path.join(transcriptDir, "rotated-same-id.jsonl");
+    const rotatedTranscriptLocator = path.join(transcriptDir, "rotated-same-id.jsonl");
 
     await incrementCompactionCount({
       sessionEntry: entry,
       sessionStore,
       sessionKey,
       newSessionId: "same-id",
-      newSessionFile: rotatedSessionFile,
+      newTranscriptLocator: rotatedTranscriptLocator,
     });
 
     const stored = readStoredMainAgentSessionRows();
     expect(stored[sessionKey].sessionId).toBe("same-id");
-    expect(stored[sessionKey].sessionFile).toBe(rotatedSessionFile);
+    expect(stored[sessionKey].transcriptLocator).toBe(rotatedTranscriptLocator);
     expect(stored[sessionKey].compactionCount).toBe(1);
   });
 

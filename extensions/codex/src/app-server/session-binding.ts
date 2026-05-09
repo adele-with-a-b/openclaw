@@ -38,7 +38,7 @@ export type CodexAppServerThreadBinding = {
   schemaVersion: 1;
   threadId: string;
   sessionKey?: string;
-  sessionFile: string;
+  transcriptLocator: string;
   cwd: string;
   authProfileId?: string;
   model?: string;
@@ -58,26 +58,26 @@ export type CodexAppServerBindingIdentity =
   | string
   | {
       sessionKey?: string;
-      sessionFile?: string;
+      transcriptLocator?: string;
     };
 
 function normalizeCodexAppServerBindingIdentity(identity: CodexAppServerBindingIdentity): {
   primaryKey: string;
-  legacySessionFileKey?: string;
+  legacyTranscriptLocatorKey?: string;
   sessionKey?: string;
-  sessionFile: string;
+  transcriptLocator: string;
 } {
   if (typeof identity === "string") {
-    const sessionFile = identity.trim();
-    return { primaryKey: sessionFile, sessionFile };
+    const transcriptLocator = identity.trim();
+    return { primaryKey: transcriptLocator, transcriptLocator };
   }
   const sessionKey = identity.sessionKey?.trim() || undefined;
-  const sessionFile = identity.sessionFile?.trim() || "";
+  const transcriptLocator = identity.transcriptLocator?.trim() || "";
   return {
-    primaryKey: sessionKey ? `session-key:${sessionKey}` : sessionFile,
-    legacySessionFileKey: sessionKey && sessionFile ? sessionFile : undefined,
+    primaryKey: sessionKey ? `session-key:${sessionKey}` : transcriptLocator,
+    legacyTranscriptLocatorKey: sessionKey && transcriptLocator ? transcriptLocator : undefined,
     sessionKey,
-    sessionFile,
+    transcriptLocator,
   };
 }
 
@@ -104,10 +104,10 @@ function normalizeCodexAppServerBinding(
       typeof parsed.sessionKey === "string" && parsed.sessionKey.trim()
         ? parsed.sessionKey.trim()
         : identity.sessionKey,
-    sessionFile:
-      typeof parsed.sessionFile === "string" && parsed.sessionFile.trim()
-        ? parsed.sessionFile
-        : identity.sessionFile,
+    transcriptLocator:
+      typeof parsed.transcriptLocator === "string" && parsed.transcriptLocator.trim()
+        ? parsed.transcriptLocator
+        : identity.transcriptLocator,
     cwd: typeof parsed.cwd === "string" ? parsed.cwd : "",
     authProfileId,
     model: typeof parsed.model === "string" ? parsed.model : undefined,
@@ -147,10 +147,13 @@ export async function readCodexAppServerBinding(
   if (value !== undefined) {
     return normalizeCodexAppServerBinding(normalized, value, lookup);
   }
-  if (normalized.legacySessionFileKey) {
+  if (normalized.legacyTranscriptLocatorKey) {
     return normalizeCodexAppServerBinding(
       normalized,
-      readOpenClawStateKvJson(CODEX_APP_SERVER_BINDING_KV_SCOPE, normalized.legacySessionFileKey),
+      readOpenClawStateKvJson(
+        CODEX_APP_SERVER_BINDING_KV_SCOPE,
+        normalized.legacyTranscriptLocatorKey,
+      ),
       lookup,
     );
   }
@@ -161,10 +164,10 @@ export async function writeCodexAppServerBinding(
   identity: CodexAppServerBindingIdentity,
   binding: Omit<
     CodexAppServerThreadBinding,
-    "schemaVersion" | "sessionKey" | "sessionFile" | "createdAt" | "updatedAt"
+    "schemaVersion" | "sessionKey" | "transcriptLocator" | "createdAt" | "updatedAt"
   > & {
     sessionKey?: string;
-    sessionFile?: string;
+    transcriptLocator?: string;
     createdAt?: string;
   },
   lookup: Omit<CodexAppServerAuthProfileLookup, "authProfileId"> = {},
@@ -174,7 +177,7 @@ export async function writeCodexAppServerBinding(
   const payload: CodexAppServerThreadBinding = {
     schemaVersion: 1,
     sessionKey: binding.sessionKey?.trim() || normalized.sessionKey,
-    sessionFile: binding.sessionFile?.trim() || normalized.sessionFile,
+    transcriptLocator: binding.transcriptLocator?.trim() || normalized.transcriptLocator,
     threadId: binding.threadId,
     cwd: binding.cwd,
     authProfileId: binding.authProfileId,
@@ -200,10 +203,13 @@ export async function writeCodexAppServerBinding(
     codexAppServerBindingToJsonValue(payload),
   );
   if (
-    normalized.legacySessionFileKey &&
-    normalized.legacySessionFileKey !== normalized.primaryKey
+    normalized.legacyTranscriptLocatorKey &&
+    normalized.legacyTranscriptLocatorKey !== normalized.primaryKey
   ) {
-    deleteOpenClawStateKvJson(CODEX_APP_SERVER_BINDING_KV_SCOPE, normalized.legacySessionFileKey);
+    deleteOpenClawStateKvJson(
+      CODEX_APP_SERVER_BINDING_KV_SCOPE,
+      normalized.legacyTranscriptLocatorKey,
+    );
   }
 }
 
@@ -269,8 +275,11 @@ export async function clearCodexAppServerBinding(
 ): Promise<void> {
   const normalized = normalizeCodexAppServerBindingIdentity(identity);
   deleteOpenClawStateKvJson(CODEX_APP_SERVER_BINDING_KV_SCOPE, normalized.primaryKey);
-  if (normalized.legacySessionFileKey) {
-    deleteOpenClawStateKvJson(CODEX_APP_SERVER_BINDING_KV_SCOPE, normalized.legacySessionFileKey);
+  if (normalized.legacyTranscriptLocatorKey) {
+    deleteOpenClawStateKvJson(
+      CODEX_APP_SERVER_BINDING_KV_SCOPE,
+      normalized.legacyTranscriptLocatorKey,
+    );
   }
 }
 

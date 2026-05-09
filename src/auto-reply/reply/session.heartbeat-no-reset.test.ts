@@ -89,11 +89,15 @@ describe("initSessionState - heartbeat should not trigger session reset", () => 
       listSessionEntries({ agentId: "main" }).map(({ sessionKey, entry }) => [sessionKey, entry]),
     );
 
-  const writeSessionHeader = (sessionFile: string, sessionId: string, startedAt: number): void => {
+  const writeSessionHeader = (
+    transcriptLocator: string,
+    sessionId: string,
+    startedAt: number,
+  ): void => {
     replaceSqliteSessionTranscriptEvents({
       agentId: "main",
       sessionId,
-      transcriptPath: sessionFile,
+      transcriptPath: transcriptLocator,
       events: [
         {
           type: "session",
@@ -232,10 +236,10 @@ describe("initSessionState - heartbeat should not trigger session reset", () => 
   it("resets daily sessions using the transcript header even when updatedAt is fresh", async () => {
     const now = Date.now();
     const staleTime = now - 25 * 60 * 60 * 1000;
-    const sessionFile = path.join(tempDir, "legacy-daily-session.jsonl");
-    writeSessionHeader(sessionFile, "legacy-daily-session", staleTime);
+    const transcriptLocator = path.join(tempDir, "legacy-daily-session.jsonl");
+    writeSessionHeader(transcriptLocator, "legacy-daily-session", staleTime);
     await saveExistingSession("legacy-daily-session", now, {
-      sessionFile,
+      transcriptLocator,
       lastInteractionAt: staleTime,
     });
 
@@ -261,10 +265,10 @@ describe("initSessionState - heartbeat should not trigger session reset", () => 
   it("does not let heartbeat keep an idle session fresh without lastInteractionAt", async () => {
     const now = Date.now();
     const staleTime = now - 10 * 60 * 1000;
-    const sessionFile = path.join(tempDir, "legacy-idle-session.jsonl");
-    writeSessionHeader(sessionFile, "legacy-idle-session", staleTime);
+    const transcriptLocator = path.join(tempDir, "legacy-idle-session.jsonl");
+    writeSessionHeader(transcriptLocator, "legacy-idle-session", staleTime);
     await saveExistingSession("legacy-idle-session", now, {
-      sessionFile,
+      transcriptLocator,
     });
 
     const cfg = createBaseConfig();

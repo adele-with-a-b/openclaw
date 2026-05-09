@@ -91,7 +91,7 @@ async function createStoredSession(params: {
   await writeSessionRows({
     [params.sessionKey]: {
       sessionId: params.sessionId,
-      sessionFile: transcriptPath,
+      transcriptLocator: transcriptPath,
       updatedAt: params.updatedAt ?? Date.now(),
     },
   });
@@ -184,7 +184,7 @@ describe("session hook context wiring", () => {
     });
     expect(context).toMatchObject({ sessionKey, agentId: "main" });
     expect(context).toMatchObject({ sessionId: event?.sessionId });
-    expect(event?.sessionFile).toBe(
+    expect(event?.transcriptLocator).toBe(
       createSqliteSessionTranscriptLocator({ agentId: "main", sessionId: "old-session" }),
     );
 
@@ -256,7 +256,7 @@ describe("session hook context wiring", () => {
       expect(event).toMatchObject({
         reason: "daily",
       });
-      expect(event?.sessionFile).toContain("daily-session.jsonl");
+      expect(event?.transcriptLocator).toContain("daily-session.jsonl");
       expect(event?.nextSessionId).toBe(startEvent?.sessionId);
     } finally {
       vi.useRealTimers();

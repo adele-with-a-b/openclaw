@@ -104,8 +104,8 @@ async function createTmpDir(): Promise<string> {
   return tmpDir;
 }
 
-async function loadBranch(sessionFile: string) {
-  return (await readTranscriptState(sessionFile)).getBranch();
+async function loadBranch(transcriptLocator: string) {
+  return (await readTranscriptState(transcriptLocator)).getBranch();
 }
 
 describe("truncateToolResultText", () => {
@@ -432,7 +432,7 @@ describe("truncateOversizedToolResultsInMessages", () => {
 });
 
 describe("truncateOversizedToolResultsInSession", () => {
-  it("readably truncates aggregate medium tool results in a session file", async () => {
+  it("readably truncates aggregate medium tool results in a transcript locator", async () => {
     const dir = await createTmpDir();
     const sm = SessionManager.create(dir);
     sm.appendMessage(makeUserMessage("hello"));
@@ -441,9 +441,9 @@ describe("truncateOversizedToolResultsInSession", () => {
     sm.appendMessage(makeToolResult(medium, "call_1"));
     sm.appendMessage(makeToolResult(medium, "call_2"));
     sm.appendMessage(makeToolResult(medium, "call_3"));
-    const sessionFile = sm.getSessionFile()!;
+    const transcriptLocator = sm.getTranscriptLocator()!;
 
-    const beforeBranch = await loadBranch(sessionFile);
+    const beforeBranch = await loadBranch(transcriptLocator);
     const beforeLengths = beforeBranch
       .filter((entry) => entry.type === "message")
       .map((entry) =>
@@ -459,7 +459,7 @@ describe("truncateOversizedToolResultsInSession", () => {
     const listener = vi.fn();
     const cleanup = onSessionTranscriptUpdate(listener);
     const result = await truncateOversizedToolResultsInSession({
-      sessionFile,
+      transcriptLocator,
       sessionKey: "agent:main:test",
       contextWindowTokens: 100,
     });
@@ -468,9 +468,9 @@ describe("truncateOversizedToolResultsInSession", () => {
 
     expect(result.truncated).toBe(true);
     expect(result.truncatedCount).toBeGreaterThan(0);
-    expect(listener).toHaveBeenCalledWith({ sessionFile, sessionKey: "agent:main:test" });
+    expect(listener).toHaveBeenCalledWith({ transcriptLocator, sessionKey: "agent:main:test" });
 
-    const afterBranch = await loadBranch(sessionFile);
+    const afterBranch = await loadBranch(transcriptLocator);
     const afterToolResults = afterBranch.filter(
       (entry) => entry.type === "message" && entry.message.role === "toolResult",
     );
@@ -506,9 +506,9 @@ describe("truncateOversizedToolResultsInSession", () => {
     const newerEnough = "newer-enough ".repeat(500);
     sm.appendMessage(makeToolResult(olderLarge, "call_1"));
     sm.appendMessage(makeToolResult(newerEnough, "call_2"));
-    const sessionFile = sm.getSessionFile()!;
+    const transcriptLocator = sm.getTranscriptLocator()!;
 
-    const beforeBranch = await loadBranch(sessionFile);
+    const beforeBranch = await loadBranch(transcriptLocator);
     const beforeToolResults = beforeBranch.filter(
       (entry) => entry.type === "message" && entry.message.role === "toolResult",
     );
@@ -517,14 +517,14 @@ describe("truncateOversizedToolResultsInSession", () => {
     );
 
     const result = await truncateOversizedToolResultsInSession({
-      sessionFile,
+      transcriptLocator,
       contextWindowTokens: 128_000,
     });
 
     expect(result.truncated).toBe(true);
     expect(result.truncatedCount).toBe(1);
 
-    const afterBranch = await loadBranch(sessionFile);
+    const afterBranch = await loadBranch(transcriptLocator);
     const afterToolResults = afterBranch.filter(
       (entry) => entry.type === "message" && entry.message.role === "toolResult",
     );
@@ -543,15 +543,15 @@ describe("truncateOversizedToolResultsInSession", () => {
     sm.appendMessage(makeUserMessage("hello"));
     sm.appendMessage(makeAssistantMessage("calling tools"));
     sm.appendMessage(makeToolResult("x".repeat(500_000), "call_1"));
-    const sessionFile = sm.getSessionFile()!;
+    const transcriptLocator = sm.getTranscriptLocator()!;
 
     const result = await truncateOversizedToolResultsInSession({
-      sessionFile,
+      transcriptLocator,
       contextWindowTokens: 100,
     });
 
     expect(result.truncated).toBe(true);
-    const afterBranch = await loadBranch(sessionFile);
+    const afterBranch = await loadBranch(transcriptLocator);
     const toolResult = afterBranch.find(
       (entry) => entry.type === "message" && entry.message.role === "toolResult",
     );
@@ -572,17 +572,17 @@ describe("truncateOversizedToolResultsInSession", () => {
     const medium = "alpha beta gamma delta epsilon ".repeat(800);
     sm.appendMessage(makeToolResult(medium, "call_2"));
     sm.appendMessage(makeToolResult(medium, "call_3"));
-    const sessionFile = sm.getSessionFile()!;
+    const transcriptLocator = sm.getTranscriptLocator()!;
 
     const result = await truncateOversizedToolResultsInSession({
-      sessionFile,
+      transcriptLocator,
       contextWindowTokens: 100,
     });
 
     expect(result.truncated).toBe(true);
     expect(result.truncatedCount).toBe(3);
 
-    const afterBranch = await loadBranch(sessionFile);
+    const afterBranch = await loadBranch(transcriptLocator);
     const toolResults = afterBranch.filter(
       (entry) => entry.type === "message" && entry.message.role === "toolResult",
     );
@@ -604,16 +604,16 @@ describe("truncateOversizedToolResultsInSession", () => {
     sm.appendMessage(makeToolResult(medium, "call_1"));
     sm.appendMessage(makeToolResult(medium, "call_2"));
     sm.appendMessage(makeToolResult(medium, "call_3"));
-    const sessionFile = sm.getSessionFile()!;
+    const transcriptLocator = sm.getTranscriptLocator()!;
 
     const result = await truncateOversizedToolResultsInSession({
-      sessionFile,
+      transcriptLocator,
       contextWindowTokens: 128_000,
       maxCharsOverride: 120,
     });
 
     expect(result.truncated).toBe(true);
-    const afterBranch = await loadBranch(sessionFile);
+    const afterBranch = await loadBranch(transcriptLocator);
     const toolResults = afterBranch.filter(
       (entry) => entry.type === "message" && entry.message.role === "toolResult",
     );

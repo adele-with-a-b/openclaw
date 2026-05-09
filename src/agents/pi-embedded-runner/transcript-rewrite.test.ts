@@ -159,13 +159,13 @@ async function makeTmpDir(): Promise<string> {
 }
 
 async function seedSqliteRewriteSession(): Promise<{
-  sessionFile: string;
+  transcriptLocator: string;
   toolResultEntryId: string;
 }> {
   const dir = await makeTmpDir();
   vi.stubEnv("OPENCLAW_STATE_DIR", dir);
   const sessionId = "rewrite-test";
-  const sessionFile = createSqliteSessionTranscriptLocator({ agentId: "main", sessionId });
+  const transcriptLocator = createSqliteSessionTranscriptLocator({ agentId: "main", sessionId });
   const header: SessionHeader = {
     type: "session",
     id: sessionId,
@@ -214,10 +214,10 @@ async function seedSqliteRewriteSession(): Promise<{
   replaceSqliteSessionTranscriptEvents({
     agentId: "main",
     sessionId,
-    transcriptPath: sessionFile,
+    transcriptPath: transcriptLocator,
     events: [header, ...entries],
   });
-  return { sessionFile, toolResultEntryId: "tool-result-1" };
+  return { transcriptLocator, toolResultEntryId: "tool-result-1" };
 }
 
 describe("rewriteTranscriptEntriesInSessionManager", () => {
@@ -351,7 +351,7 @@ describe("rewriteTranscriptEntriesInSessionManager", () => {
 
 describe("rewriteTranscriptEntriesInSqliteTranscript", () => {
   it("emits transcript updates when the active SQLite branch changes without opening a manager", async () => {
-    const { sessionFile, toolResultEntryId } = await seedSqliteRewriteSession();
+    const { transcriptLocator, toolResultEntryId } = await seedSqliteRewriteSession();
 
     const openSpy = vi.spyOn(SessionManager, "open").mockImplementation(() => {
       throw new Error("SessionManager.open should not be used for SQLite transcript rewrites");
@@ -361,7 +361,7 @@ describe("rewriteTranscriptEntriesInSqliteTranscript", () => {
 
     try {
       const result = await rewriteTranscriptEntriesInSqliteTranscript({
-        transcriptPath: sessionFile,
+        transcriptPath: transcriptLocator,
         sessionKey: "agent:main:test",
         request: {
           replacements: [
@@ -374,10 +374,10 @@ describe("rewriteTranscriptEntriesInSqliteTranscript", () => {
       });
 
       expect(result.changed).toBe(true);
-      expect(listener).toHaveBeenCalledWith({ sessionFile, sessionKey: "agent:main:test" });
+      expect(listener).toHaveBeenCalledWith({ transcriptLocator, sessionKey: "agent:main:test" });
 
       openSpy.mockRestore();
-      const rewrittenState = await readTranscriptState(sessionFile);
+      const rewrittenState = await readTranscriptState(transcriptLocator);
       const rewrittenToolResult = getStateBranchMessages(rewrittenState)[1] as Extract<
         AgentMessage,
         { role: "toolResult" }

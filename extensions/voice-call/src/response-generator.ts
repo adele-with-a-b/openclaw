@@ -256,7 +256,7 @@ export async function generateVoiceResponse(
   }
   const sessionId = sessionEntry.sessionId;
 
-  const sessionFile = createSqliteSessionTranscriptLocator({
+  const transcriptLocator = createSqliteSessionTranscriptLocator({
     agentId,
     sessionId,
   });
@@ -293,7 +293,7 @@ export async function generateVoiceResponse(
       sandboxSessionKey: resolveVoiceSandboxSessionKey(agentId, resolvedSessionKey),
       agentId,
       messageProvider: "voice",
-      sessionFile,
+      transcriptLocator,
       workspaceDir,
       config: cfg,
       prompt: userMessage,

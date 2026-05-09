@@ -48,7 +48,7 @@ export type AgentSession = {
     };
   };
   messages: AgentMessage[];
-  sessionFile?: string;
+  transcriptLocator?: string;
   isCompacting: boolean;
   subscribe(listener: AgentSessionEventListener): () => void;
   abortCompaction(): void;

@@ -34,7 +34,7 @@ async function resolveBootstrapContext(params: {
     bootstrapContextMode: params.bootstrapContextMode ?? "full",
     bootstrapContextRunKind: params.bootstrapContextRunKind ?? "default",
     bootstrapMode: params.bootstrapMode ?? "none",
-    sessionFile: TEST_SESSION_FILE,
+    transcriptLocator: TEST_SESSION_FILE,
     hasCompletedBootstrapTranscriptTurn,
     resolveBootstrapContextForRun,
   });

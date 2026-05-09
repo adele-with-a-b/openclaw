@@ -334,7 +334,7 @@ function assertStateSurvived() {
   assert(fs.existsSync(path.join(workspace, "IDENTITY.md")), "workspace identity file missing");
   assert(
     fs.existsSync(path.join(stateDir, "agents", "main", "sessions", "legacy-session.json")),
-    "legacy session file missing",
+    "legacy transcript locator missing",
   );
   const stage = process.env.OPENCLAW_UPGRADE_SURVIVOR_ASSERT_STAGE || "survival";
   const legacyRuntimeRoot = path.join(stateDir, "plugin-runtime-deps");

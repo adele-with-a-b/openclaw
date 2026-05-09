@@ -300,7 +300,7 @@ type PreparedSpawnContext =
       mode: "fork";
       parentEntry: SessionEntry;
       childEntry?: SessionEntry;
-      forked: { sessionId: string; sessionFile: string };
+      forked: { sessionId: string; transcriptLocator: string };
       forkFallbackNote?: never;
     }
   | { status: "error"; error: string };
@@ -347,7 +347,7 @@ async function prepareSubagentSessionContext(params: {
       parentEntry,
       agentId: params.requesterAgentId,
     });
-    let forked: { sessionId: string; sessionFile: string } | null = null;
+    let forked: { sessionId: string; transcriptLocator: string } | null = null;
     if (forkDecision.status === "skip") {
       forkFallbackNote = forkDecision.message;
     } else {
@@ -362,7 +362,7 @@ async function prepareSubagentSessionContext(params: {
       }
       const nextChildEntry = mergeSessionEntry(childEntry, {
         sessionId: forked.sessionId,
-        sessionFile: forked.sessionFile,
+        transcriptLocator: forked.transcriptLocator,
         forkedFromParent: true,
       });
       await subagentSpawnDeps.upsertSessionEntry({
@@ -426,15 +426,15 @@ async function prepareContextEngineSubagentSpawn(params: {
       childSessionKey: params.childSessionKey,
       contextMode: params.context.mode,
       parentSessionId: params.context.parentEntry?.sessionId,
-      parentSessionFile: params.context.parentEntry?.sessionFile,
+      parentTranscriptLocator: params.context.parentEntry?.transcriptLocator,
       childSessionId:
         params.context.mode === "fork"
           ? params.context.forked.sessionId
           : params.context.childEntry?.sessionId,
-      childSessionFile:
+      childTranscriptLocator:
         params.context.mode === "fork"
-          ? params.context.forked.sessionFile
-          : params.context.childEntry?.sessionFile,
+          ? params.context.forked.transcriptLocator
+          : params.context.childEntry?.transcriptLocator,
       ttlMs: params.runTimeoutSeconds > 0 ? params.runTimeoutSeconds * 1000 : undefined,
     });
     return { status: "ok", preparation };

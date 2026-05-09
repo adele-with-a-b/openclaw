@@ -135,7 +135,7 @@ describe("Crestodian assistant", () => {
       model: "claude-opus-4-7",
       cleanupCliLiveSessionOnRunEnd: true,
     });
-    expect(firstCliCall.sessionFile).toMatch(
+    expect(firstCliCall.transcriptLocator).toMatch(
       /^sqlite-transcript:\/\/crestodian\/crestodian-planner-/,
     );
     expect(firstCliCall.config?.agents?.defaults?.cliBackends).toBeUndefined();
@@ -220,7 +220,7 @@ describe("Crestodian assistant", () => {
       disableTools: true,
       toolsAllow: [],
     });
-    expect(firstEmbeddedCall.sessionFile).toMatch(
+    expect(firstEmbeddedCall.transcriptLocator).toMatch(
       /^sqlite-transcript:\/\/crestodian\/crestodian-planner-/,
     );
     expect(firstEmbeddedCall.config).toMatchObject({
@@ -274,7 +274,7 @@ describe("Crestodian assistant", () => {
       model: "gpt-5.5",
       cleanupCliLiveSessionOnRunEnd: true,
     });
-    expect(runCliAgent.mock.calls[0][0].sessionFile).toMatch(
+    expect(runCliAgent.mock.calls[0][0].transcriptLocator).toMatch(
       /^sqlite-transcript:\/\/crestodian\/crestodian-planner-/,
     );
   });

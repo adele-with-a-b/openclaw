@@ -75,7 +75,7 @@ describe("timeout-triggered compaction", () => {
     expect(mockedCompactDirect).toHaveBeenCalledWith(
       expect.objectContaining({
         sessionId: "test-session",
-        sessionFile: "sqlite-transcript://main/test-session.jsonl",
+        transcriptLocator: "sqlite-transcript://main/test-session.jsonl",
         tokenBudget: 200000,
         force: true,
         compactionTarget: "budget",
@@ -120,7 +120,7 @@ describe("timeout-triggered compaction", () => {
         tokensBefore: 160000,
         tokensAfter: 60000,
         sessionId: "timeout-rotated-session",
-        sessionFile: "sqlite-transcript://main/timeout-rotated-session.jsonl",
+        transcriptLocator: "sqlite-transcript://main/timeout-rotated-session.jsonl",
       }),
     );
     // Second attempt succeeds
@@ -128,7 +128,7 @@ describe("timeout-triggered compaction", () => {
       makeAttemptResult({
         promptError: null,
         sessionIdUsed: "timeout-rotated-session",
-        sessionFileUsed: "sqlite-transcript://main/timeout-rotated-session.jsonl",
+        transcriptLocatorUsed: "sqlite-transcript://main/timeout-rotated-session.jsonl",
       }),
     );
 
@@ -140,7 +140,7 @@ describe("timeout-triggered compaction", () => {
       2,
       expect.objectContaining({
         sessionId: "timeout-rotated-session",
-        sessionFile: "sqlite-transcript://main/timeout-rotated-session.jsonl",
+        transcriptLocator: "sqlite-transcript://main/timeout-rotated-session.jsonl",
       }),
     );
     expect(mockedRunPostCompactionSideEffects).not.toHaveBeenCalled();
@@ -449,7 +449,7 @@ describe("timeout-triggered compaction", () => {
     await runEmbeddedPiAgent(overflowBaseRunParams);
 
     expect(mockedGlobalHookRunner.runBeforeCompaction).toHaveBeenCalledWith(
-      { messageCount: -1, sessionFile: "sqlite-transcript://main/test-session.jsonl" },
+      { messageCount: -1, transcriptLocator: "sqlite-transcript://main/test-session.jsonl" },
       expect.objectContaining({
         sessionKey: "test-key",
       }),
@@ -459,7 +459,7 @@ describe("timeout-triggered compaction", () => {
         messageCount: -1,
         compactedCount: -1,
         tokenCount: 70,
-        sessionFile: "sqlite-transcript://main/test-session.jsonl",
+        transcriptLocator: "sqlite-transcript://main/test-session.jsonl",
       },
       expect.objectContaining({
         sessionKey: "test-key",

@@ -80,7 +80,7 @@ function resolveForkParentTranscriptLocator(
   parentEntry: StoreSessionEntry,
   agentId: string,
 ): string {
-  const transcriptLocator = parentEntry.sessionFile?.trim();
+  const transcriptLocator = parentEntry.transcriptLocator?.trim();
   if (transcriptLocator && isSqliteSessionTranscriptLocator(transcriptLocator)) {
     return transcriptLocator;
   }
@@ -101,7 +101,7 @@ export async function resolveParentForkTokenCountRuntime(params: {
   try {
     const usage = await readLatestRecentSessionUsageFromTranscriptAsync(
       params.parentEntry.sessionId,
-      params.parentEntry.sessionFile,
+      params.parentEntry.transcriptLocator,
       params.agentId,
       1024 * 1024,
     );
@@ -245,7 +245,7 @@ async function writeForkHeaderOnly(params: {
   parentTranscriptLocator: string;
   agentId: string;
   cwd: string;
-}): Promise<{ sessionId: string; sessionFile: string }> {
+}): Promise<{ sessionId: string; transcriptLocator: string }> {
   const sessionId = crypto.randomUUID();
   const timestamp = new Date().toISOString();
   const childTranscriptLocator = createSqliteSessionTranscriptLocator({
@@ -266,13 +266,13 @@ async function writeForkHeaderOnly(params: {
     transcriptPath: childTranscriptLocator,
     events: [header],
   });
-  return { sessionId, sessionFile: childTranscriptLocator };
+  return { sessionId, transcriptLocator: childTranscriptLocator };
 }
 
 async function writeBranchedSession(params: {
   parentTranscriptLocator: string;
   source: ForkSourceTranscript;
-}): Promise<{ sessionId: string; sessionFile: string }> {
+}): Promise<{ sessionId: string; transcriptLocator: string }> {
   const sessionId = crypto.randomUUID();
   const timestamp = new Date().toISOString();
   const childTranscriptLocator = createSqliteSessionTranscriptLocator({
@@ -306,13 +306,13 @@ async function writeBranchedSession(params: {
       events: entries,
     });
   }
-  return { sessionId, sessionFile: childTranscriptLocator };
+  return { sessionId, transcriptLocator: childTranscriptLocator };
 }
 
 export async function forkSessionFromParentRuntime(params: {
   parentEntry: StoreSessionEntry;
   agentId: string;
-}): Promise<{ sessionId: string; sessionFile: string } | null> {
+}): Promise<{ sessionId: string; transcriptLocator: string } | null> {
   const parentTranscriptLocator = resolveForkParentTranscriptLocator(
     params.parentEntry,
     params.agentId,

@@ -18,7 +18,7 @@ type ProjectorNotification = Parameters<CodexAppServerEventProjector["handleNoti
 async function createParams(): Promise<EmbeddedRunAttemptParams> {
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-codex-delivery-contract-"));
   tempDirs.add(tempDir);
-  const sessionFile = createSqliteSessionTranscriptLocator({
+  const transcriptLocator = createSqliteSessionTranscriptLocator({
     agentId: "main",
     sessionId: DELIVERY_NO_REPLY_RUNTIME_CONTRACT.sessionId,
   });
@@ -26,7 +26,7 @@ async function createParams(): Promise<EmbeddedRunAttemptParams> {
     prompt: DELIVERY_NO_REPLY_RUNTIME_CONTRACT.prompt,
     sessionId: DELIVERY_NO_REPLY_RUNTIME_CONTRACT.sessionId,
     sessionKey: DELIVERY_NO_REPLY_RUNTIME_CONTRACT.sessionKey,
-    sessionFile,
+    transcriptLocator,
     workspaceDir: tempDir,
     runId: DELIVERY_NO_REPLY_RUNTIME_CONTRACT.runId,
     provider: "codex",

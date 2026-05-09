@@ -10,7 +10,7 @@ function normalizeTranscriptLocator(value: string | undefined): string | undefin
 
 export function resolveSessionTranscriptCandidates(
   sessionId: string,
-  sessionFile?: string,
+  transcriptLocator?: string,
   agentId?: string,
 ): string[] {
   const candidates: string[] = [];
@@ -22,9 +22,9 @@ export function resolveSessionTranscriptCandidates(
     }
   };
 
-  const normalizedSessionFile = normalizeTranscriptLocator(sessionFile);
-  if (normalizedSessionFile) {
-    candidates.push(normalizedSessionFile);
+  const normalizedTranscriptLocator = normalizeTranscriptLocator(transcriptLocator);
+  if (normalizedTranscriptLocator) {
+    candidates.push(normalizedTranscriptLocator);
   }
 
   if (agentId) {
@@ -36,18 +36,18 @@ export function resolveSessionTranscriptCandidates(
 
 export function resolveStableSessionEndTranscript(params: {
   sessionId: string;
-  sessionFile?: string;
+  transcriptLocator?: string;
   agentId?: string;
-}): { sessionFile?: string } {
-  const stableLocator = normalizeTranscriptLocator(params.sessionFile);
+}): { transcriptLocator?: string } {
+  const stableLocator = normalizeTranscriptLocator(params.transcriptLocator);
   if (stableLocator) {
-    return { sessionFile: stableLocator };
+    return { transcriptLocator: stableLocator };
   }
 
   const [candidate] = resolveSessionTranscriptCandidates(
     params.sessionId,
-    params.sessionFile,
+    params.transcriptLocator,
     params.agentId,
   );
-  return candidate ? { sessionFile: candidate } : {};
+  return candidate ? { transcriptLocator: candidate } : {};
 }

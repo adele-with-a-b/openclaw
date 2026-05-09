@@ -57,7 +57,7 @@ const mockState = vi.hoisted(() => ({
   lastDispatchImageOrder: undefined as string[] | undefined,
   modelCatalog: null as ModelCatalogEntry[] | null,
   emittedTranscriptUpdates: [] as Array<{
-    sessionFile: string;
+    transcriptLocator: string;
     sessionKey?: string;
     message?: unknown;
     messageId?: string;
@@ -122,7 +122,7 @@ vi.mock("../session-utils.js", async () => {
       },
       entry: {
         sessionId: mockState.sessionId,
-        sessionFile: mockState.transcriptPath,
+        transcriptLocator: mockState.transcriptPath,
         ...mockState.sessionEntry,
       },
       canonicalKey:
@@ -244,7 +244,7 @@ vi.mock("../../plugins/hook-runner-global.js", () => ({
 vi.mock("../../sessions/transcript-events.js", () => ({
   emitSessionTranscriptUpdate: vi.fn(
     (update: {
-      sessionFile: string;
+      transcriptLocator: string;
       sessionKey?: string;
       message?: unknown;
       messageId?: string;
@@ -2069,7 +2069,7 @@ describe("chat directive tag stripping for non-streaming final payloads", () => 
         (update.message as { role?: unknown }).role === "user",
     );
     expect(userUpdate).toMatchObject({
-      sessionFile: expect.stringMatching(/sess-\d+\.jsonl$/),
+      transcriptLocator: expect.stringMatching(/sess-\d+\.jsonl$/),
       sessionKey: "main",
       message: {
         role: "user",
@@ -2211,7 +2211,7 @@ describe("chat directive tag stripping for non-streaming final payloads", () => 
           (update.message as { role?: unknown }).role === "user",
       );
       expect(userUpdate).toMatchObject({
-        sessionFile: expect.stringMatching(/sess-\d+\.jsonl$/),
+        transcriptLocator: expect.stringMatching(/sess-\d+\.jsonl$/),
         sessionKey: "main",
       });
       expect(mockState.savedMediaCalls).toEqual([
@@ -3390,7 +3390,7 @@ describe("chat directive tag stripping for non-streaming final payloads", () => 
         (update.message as { role?: unknown }).role === "user",
     );
     expect(userUpdate).toMatchObject({
-      sessionFile: expect.stringMatching(/sess-\d+\.jsonl$/),
+      transcriptLocator: expect.stringMatching(/sess-\d+\.jsonl$/),
       sessionKey: "main",
       message: {
         role: "user",
@@ -3423,7 +3423,7 @@ describe("chat directive tag stripping for non-streaming final payloads", () => 
           (update.message as { role?: unknown }).role === "user",
       );
       expect(userUpdate).toMatchObject({
-        sessionFile: expect.stringMatching(/sess-\d+\.jsonl$/),
+        transcriptLocator: expect.stringMatching(/sess-\d+\.jsonl$/),
         sessionKey: "main",
         message: {
           role: "user",

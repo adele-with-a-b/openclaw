@@ -20,7 +20,7 @@ function createSessionTranscript(params: {
   filePath?: string;
   messages?: string[];
 }): string {
-  const sessionFile =
+  const transcriptLocator =
     params.filePath ??
     path.join(
       params.rootDir,
@@ -54,23 +54,23 @@ function createSessionTranscript(params: {
   replaceSqliteSessionTranscriptEvents({
     agentId: params.agentId ?? "main",
     sessionId: params.sessionId,
-    transcriptPath: sessionFile,
+    transcriptPath: transcriptLocator,
     events,
     now: () => 1_770_000_000_000,
   });
-  return sessionFile;
+  return transcriptLocator;
 }
 
 function appendSessionTranscriptEvents(params: {
   sessionId: string;
-  sessionFile: string;
+  transcriptLocator: string;
   agentId?: string;
   events: unknown[];
 }): void {
   replaceSqliteSessionTranscriptEvents({
     agentId: params.agentId ?? "main",
     sessionId: params.sessionId,
-    transcriptPath: params.sessionFile,
+    transcriptPath: params.transcriptLocator,
     events: params.events,
     now: () => 1_770_000_000_000,
   });
@@ -124,7 +124,7 @@ describe("loadCliSessionHistoryMessages", () => {
       expect(
         await loadCliSessionHistoryMessages({
           sessionId: "session-test",
-          sessionFile: outsideFile,
+          transcriptLocator: outsideFile,
           sessionKey: "agent:main:main",
           agentId: "main",
         }),
@@ -138,7 +138,7 @@ describe("loadCliSessionHistoryMessages", () => {
   it("keeps only the newest bounded history window", async () => {
     const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-cli-state-"));
     vi.stubEnv("OPENCLAW_STATE_DIR", stateDir);
-    const sessionFile = createSessionTranscript({
+    const transcriptLocator = createSessionTranscript({
       rootDir: stateDir,
       sessionId: "session-bounded",
       messages: Array.from(
@@ -150,7 +150,7 @@ describe("loadCliSessionHistoryMessages", () => {
     try {
       const history = await loadCliSessionHistoryMessages({
         sessionId: "session-bounded",
-        sessionFile,
+        transcriptLocator,
         sessionKey: "agent:main:main",
         agentId: "main",
       });
@@ -169,7 +169,7 @@ describe("loadCliSessionHistoryMessages", () => {
     const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-cli-state-"));
     const outsideDir = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-cli-outside-"));
     vi.stubEnv("OPENCLAW_STATE_DIR", stateDir);
-    const canonicalSessionFile = path.join(
+    const canonicalTranscriptLocator = path.join(
       stateDir,
       "agents",
       "main",
@@ -187,7 +187,7 @@ describe("loadCliSessionHistoryMessages", () => {
       expect(
         await loadCliSessionHistoryMessages({
           sessionId: "session-symlink",
-          sessionFile: canonicalSessionFile,
+          transcriptLocator: canonicalTranscriptLocator,
           sessionKey: "agent:main:main",
           agentId: "main",
         }),
@@ -201,7 +201,7 @@ describe("loadCliSessionHistoryMessages", () => {
   it("drops oversized transcript files instead of loading them into hook payloads", async () => {
     const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-cli-state-"));
     vi.stubEnv("OPENCLAW_STATE_DIR", stateDir);
-    const sessionFile = path.join(
+    const transcriptLocator = path.join(
       stateDir,
       "agents",
       "main",
@@ -211,7 +211,7 @@ describe("loadCliSessionHistoryMessages", () => {
     createSessionTranscript({
       rootDir: stateDir,
       sessionId: "session-oversized",
-      filePath: sessionFile,
+      filePath: transcriptLocator,
       messages: ["x".repeat(MAX_CLI_SESSION_HISTORY_FILE_BYTES + 1)],
     });
 
@@ -219,7 +219,7 @@ describe("loadCliSessionHistoryMessages", () => {
       expect(
         await loadCliSessionHistoryMessages({
           sessionId: "session-oversized",
-          sessionFile,
+          transcriptLocator,
           sessionKey: "agent:main:main",
           agentId: "main",
         }),
@@ -233,7 +233,7 @@ describe("loadCliSessionHistoryMessages", () => {
     const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-cli-state-"));
     const customStoreDir = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-cli-store-"));
     vi.stubEnv("OPENCLAW_STATE_DIR", stateDir);
-    const sessionFile = createSessionTranscript({
+    const transcriptLocator = createSessionTranscript({
       rootDir: customStoreDir,
       sessionId: "session-custom-store",
       filePath: path.join(customStoreDir, "session-custom-store.jsonl"),
@@ -244,7 +244,7 @@ describe("loadCliSessionHistoryMessages", () => {
       expect(
         await loadCliSessionHistoryMessages({
           sessionId: "session-custom-store",
-          sessionFile,
+          transcriptLocator,
           sessionKey: "agent:main:main",
           agentId: "main",
           config: {
@@ -268,7 +268,7 @@ describe("loadCliSessionReseedMessages", () => {
   it("does not reseed fresh CLI sessions from raw transcript history before compaction", async () => {
     const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-cli-state-"));
     vi.stubEnv("OPENCLAW_STATE_DIR", stateDir);
-    const sessionFile = createSessionTranscript({
+    const transcriptLocator = createSessionTranscript({
       rootDir: stateDir,
       sessionId: "session-no-compaction",
       messages: ["raw secret", "large context"],
@@ -278,7 +278,7 @@ describe("loadCliSessionReseedMessages", () => {
       expect(
         await loadCliSessionReseedMessages({
           sessionId: "session-no-compaction",
-          sessionFile,
+          transcriptLocator,
           sessionKey: "agent:main:main",
           agentId: "main",
         }),
@@ -291,14 +291,14 @@ describe("loadCliSessionReseedMessages", () => {
   it("reseeds fresh CLI sessions from the latest compaction summary and post-compaction tail", async () => {
     const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-cli-state-"));
     vi.stubEnv("OPENCLAW_STATE_DIR", stateDir);
-    const sessionFile = createSessionTranscript({
+    const transcriptLocator = createSessionTranscript({
       rootDir: stateDir,
       sessionId: "session-compacted",
       messages: ["pre-compaction raw history"],
     });
     appendSessionTranscriptEvents({
       sessionId: "session-compacted",
-      sessionFile,
+      transcriptLocator,
       events: [
         ...createSessionTranscriptEvents({
           rootDir: stateDir,
@@ -331,7 +331,7 @@ describe("loadCliSessionReseedMessages", () => {
     try {
       const reseed = await loadCliSessionReseedMessages({
         sessionId: "session-compacted",
-        sessionFile,
+        transcriptLocator,
         sessionKey: "agent:main:main",
         agentId: "main",
       });

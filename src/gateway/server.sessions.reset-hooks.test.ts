@@ -94,7 +94,7 @@ test("sessions.reset emits before_reset hook with transcript context", async () 
     entries: {
       main: {
         sessionId: "sess-main",
-        sessionFile: transcriptPath,
+        transcriptLocator: transcriptPath,
         updatedAt: Date.now(),
       },
     },
@@ -112,7 +112,7 @@ test("sessions.reset emits before_reset hook with transcript context", async () 
     beforeResetHookMocks.runBeforeReset.mock.calls as unknown as Array<[unknown, unknown]>
   )[0] ?? [undefined, undefined];
   expect(event).toMatchObject({
-    sessionFile: transcriptPath,
+    transcriptLocator: transcriptPath,
     reason: "new",
     messages: [
       {
@@ -148,7 +148,7 @@ test("sessions.reset emits before_reset hook with scoped SQLite transcript conte
     entries: {
       main: {
         sessionId: "sess-main-sqlite",
-        sessionFile: transcriptPath,
+        transcriptLocator: transcriptPath,
         updatedAt: Date.now(),
       },
     },
@@ -166,7 +166,7 @@ test("sessions.reset emits before_reset hook with scoped SQLite transcript conte
     beforeResetHookMocks.runBeforeReset.mock.calls as unknown as Array<[unknown, unknown]>
   )[0] ?? [undefined, undefined];
   expect(event).toMatchObject({
-    sessionFile: transcriptPath,
+    transcriptLocator: transcriptPath,
     reason: "new",
     messages: [
       {
@@ -202,7 +202,7 @@ test("sessions.reset emits enriched session_end and session_start hooks", async 
     entries: {
       main: {
         sessionId: "sess-main",
-        sessionFile: transcriptPath,
+        transcriptLocator: transcriptPath,
         updatedAt: Date.now(),
       },
     },
@@ -228,7 +228,7 @@ test("sessions.reset emits enriched session_end and session_start hooks", async 
     sessionKey: "agent:main:main",
     reason: "new",
   });
-  expect((endEvent as { sessionFile?: string } | undefined)?.sessionFile).toBe(
+  expect((endEvent as { transcriptLocator?: string } | undefined)?.transcriptLocator).toBe(
     createSqliteSessionTranscriptLocator({ agentId: "main", sessionId: "sess-main" }),
   );
   expect((endEvent as { nextSessionId?: string } | undefined)?.nextSessionId).toBe(
@@ -310,7 +310,7 @@ test("sessions.reset emits before_reset for the entry actually reset in the SQLi
     entries: {
       main: {
         sessionId: "sess-old",
-        sessionFile: oldTranscriptPath,
+        transcriptLocator: oldTranscriptPath,
         updatedAt: Date.now(),
       },
     },
@@ -322,7 +322,7 @@ test("sessions.reset emits before_reset for the entry actually reset in the SQLi
     agentId: "main",
     sessionKey: "agent:main:main",
     entry: sessionStoreEntry("sess-new", {
-      sessionFile: newTranscriptPath,
+      transcriptLocator: newTranscriptPath,
     }),
   });
 
@@ -341,7 +341,7 @@ test("sessions.reset emits before_reset for the entry actually reset in the SQLi
     beforeResetHookMocks.runBeforeReset.mock.calls as unknown as Array<[unknown, unknown]>
   )[0] ?? [undefined, undefined];
   expect(event).toMatchObject({
-    sessionFile: newTranscriptPath,
+    transcriptLocator: newTranscriptPath,
     reason: "new",
     messages: [
       {
@@ -412,7 +412,7 @@ test("sessions.create with emitCommandHooks=true emits reset lifecycle hooks aga
     entries: {
       main: {
         sessionId: "sess-parent-hooks",
-        sessionFile: transcriptPath,
+        transcriptLocator: transcriptPath,
         updatedAt: Date.now(),
       },
     },
@@ -431,7 +431,7 @@ test("sessions.create with emitCommandHooks=true emits reset lifecycle hooks aga
     beforeResetHookMocks.runBeforeReset.mock.calls as unknown as Array<[unknown, unknown]>
   )[0] ?? [undefined, undefined];
   expect(beforeResetEvent).toMatchObject({
-    sessionFile: transcriptPath,
+    transcriptLocator: transcriptPath,
     reason: "new",
     messages: [
       {
@@ -493,7 +493,7 @@ test("sessions.create with emitCommandHooks=true resets parent in place when ses
       entries: {
         main: {
           sessionId: "sess-parent-dms",
-          sessionFile: transcriptPath,
+          transcriptLocator: transcriptPath,
           updatedAt: Date.now(),
         },
       },

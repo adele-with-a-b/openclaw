@@ -23,7 +23,10 @@ import {
 import { resolvePreferredOpenClawTmpDir } from "../tmp-openclaw-dir.js";
 
 const mocks = vi.hoisted(() => ({
-  appendAssistantMessageToSessionTranscript: vi.fn(async () => ({ ok: true, sessionFile: "x" })),
+  appendAssistantMessageToSessionTranscript: vi.fn(async () => ({
+    ok: true,
+    transcriptLocator: "x",
+  })),
 }));
 const hookMocks = vi.hoisted(() => ({
   runner: {

@@ -58,10 +58,10 @@ agent detector:
 agent collector:
   model: sonnet
   prompt: """
-    You locate and inventory AI coding tool session files.
+    You locate and inventory AI coding tool transcript locators.
 
     For Claude Code (~/.claude/projects/{project}/{session}/):
-    1. Main session file: {session}.jsonl - VM orchestration
+    1. Main transcript locator: {session}.jsonl - VM orchestration
     2. Subagent files: subagents/agent-*.jsonl - OpenProse sessions
 
     Your job is to FIND the files, not process them.
@@ -193,7 +193,7 @@ let tool_detection = session: detector
 
 assert tool_detection.tool != "not-found":
   """
-  ERROR: Profiling requires actual data from AI tool session files.
+  ERROR: Profiling requires actual data from AI tool transcript locators.
 
   Could not find session data for this run. This can happen if:
   1. The run was not executed with Claude Code (or supported tool)
@@ -210,7 +210,7 @@ assert tool_detection.tool != "not-found":
 
 let runs_to_analyze = session: collector
   prompt: """
-    Find runs to analyze and locate their session files.
+    Find runs to analyze and locate their transcript locators.
 
     Input: {run_path}
     Scope: {scope}

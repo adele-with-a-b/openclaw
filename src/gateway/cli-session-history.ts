@@ -6,7 +6,7 @@ import {
   readClaudeCliFallbackSeed,
   readClaudeCliSessionMessages,
   resolveClaudeCliBindingSessionId,
-  resolveClaudeCliSessionFilePath,
+  resolveClaudeCliTranscriptLocatorPath,
 } from "./cli-session-history.claude.js";
 import { mergeImportedChatHistoryMessages } from "./cli-session-history.merge.js";
 
@@ -17,7 +17,7 @@ export {
   readClaudeCliFallbackSeed,
   readClaudeCliSessionMessages,
   resolveClaudeCliBindingSessionId,
-  resolveClaudeCliSessionFilePath,
+  resolveClaudeCliTranscriptLocatorPath,
 };
 export type { ClaudeCliFallbackSeed };
 

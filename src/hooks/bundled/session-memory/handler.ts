@@ -171,7 +171,7 @@ async function saveSessionMemoryNow(event: Parameters<HookHandler>[0]): Promise<
       unknown
     >;
     const currentSessionId = sessionEntry.sessionId as string;
-    const currentTranscriptPath = (sessionEntry.sessionFile as string) || undefined;
+    const currentTranscriptPath = (sessionEntry.transcriptLocator as string) || undefined;
 
     log.debug("Session context resolved", {
       sessionId: currentSessionId,

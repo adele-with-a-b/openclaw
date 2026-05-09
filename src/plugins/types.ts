@@ -1857,7 +1857,7 @@ export type PluginCommandDiagnosticsSession = {
   /** Ephemeral OpenClaw session id when available. */
   sessionId?: string;
   /** Transcript file for this OpenClaw session when available. */
-  sessionFile?: string;
+  transcriptLocator?: string;
   /** Embedded agent harness selected for this session. */
   agentHarnessId?: string;
   /** Channel/provider for this session when available. */
@@ -1893,7 +1893,7 @@ export type PluginCommandContext = {
   /** Ephemeral host session id for the active conversation when available. */
   sessionId?: string;
   /** Transcript file for the active OpenClaw session when available. */
-  sessionFile?: string;
+  transcriptLocator?: string;
   /** Raw command arguments after the command name */
   args?: string;
   /** The full normalized command body */

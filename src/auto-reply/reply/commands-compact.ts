@@ -129,7 +129,7 @@ export const handleCompactCommand: CommandHandler = async (params) => {
     senderName: params.ctx.SenderName,
     senderUsername: params.ctx.SenderUsername,
     senderE164: params.ctx.SenderE164,
-    sessionFile: runtime.createSqliteSessionTranscriptLocator({
+    transcriptLocator: runtime.createSqliteSessionTranscriptLocator({
       agentId: sessionAgentId,
       sessionId,
     }),
@@ -172,7 +172,7 @@ export const handleCompactCommand: CommandHandler = async (params) => {
       // Update token counts after compaction
       tokensAfter: result.result?.tokensAfter,
       newSessionId: result.result?.sessionId,
-      newSessionFile: result.result?.sessionFile,
+      newTranscriptLocator: result.result?.transcriptLocator,
     });
   }
   // Use the post-compaction token count for context summary if available

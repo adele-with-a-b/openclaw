@@ -105,7 +105,8 @@ async function handleTranscriptUpdateBroadcast(
   },
   update: SessionTranscriptUpdate,
 ): Promise<void> {
-  const sessionKey = update.sessionKey ?? resolveSessionKeyForTranscriptLocator(update.sessionFile);
+  const sessionKey =
+    update.sessionKey ?? resolveSessionKeyForTranscriptLocator(update.transcriptLocator);
   if (!sessionKey || update.message === undefined) {
     return;
   }
@@ -122,7 +123,7 @@ async function handleTranscriptUpdateBroadcast(
   const { entry } = loadSessionEntry(sessionKey);
   const agentId = resolveAgentIdFromSessionKey(sessionKey);
   const messageSeq = entry?.sessionId
-    ? await readSessionMessageCountAsync(entry.sessionId, entry.sessionFile, agentId)
+    ? await readSessionMessageCountAsync(entry.sessionId, entry.transcriptLocator, agentId)
     : undefined;
   const sessionSnapshot = buildGatewaySessionSnapshot({
     sessionRow: loadGatewaySessionRow(sessionKey, { transcriptUsageMaxBytes: 64 * 1024 }),

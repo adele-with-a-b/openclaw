@@ -55,20 +55,20 @@ async function createParams(): Promise<EmbeddedRunAttemptParams> {
     .basename(tempDir)
     .replace(/[^a-z0-9]/giu, "")
     .toLowerCase()}`;
-  const sessionFile = createSqliteSessionTranscriptLocator({
+  const transcriptLocator = createSqliteSessionTranscriptLocator({
     agentId: "main",
     sessionId: transcriptSessionId,
   });
   appendSqliteSessionTranscriptEvent({
     agentId: "main",
     sessionId: transcriptSessionId,
-    transcriptPath: sessionFile,
+    transcriptPath: transcriptLocator,
     event: { type: "session", version: 1, id: sessionId },
   });
   appendSqliteSessionTranscriptEvent({
     agentId: "main",
     sessionId: transcriptSessionId,
-    transcriptPath: sessionFile,
+    transcriptPath: transcriptLocator,
     event: {
       type: "message",
       id: "history",
@@ -79,7 +79,7 @@ async function createParams(): Promise<EmbeddedRunAttemptParams> {
   return {
     prompt: "hello",
     sessionId,
-    sessionFile,
+    transcriptLocator,
     workspaceDir: tempDir,
     runId: "run-1",
     provider: "openai-codex",
@@ -528,7 +528,7 @@ describe("CodexAppServerEventProjector", () => {
       {
         prompt: "hello",
         sessionId: "session-1",
-        sessionFile: "/tmp/session.jsonl",
+        transcriptLocator: "/tmp/session.jsonl",
         workspaceDir: "/tmp",
         runId: "run-1",
         provider: "openai-codex",
@@ -1124,7 +1124,9 @@ describe("CodexAppServerEventProjector", () => {
     expect(beforeCompaction).toHaveBeenCalledWith(
       expect.objectContaining({
         messageCount: 1,
-        sessionFile: expect.stringMatching(/^sqlite-transcript:\/\/main\/session-1-.+\.jsonl$/u),
+        transcriptLocator: expect.stringMatching(
+          /^sqlite-transcript:\/\/main\/session-1-.+\.jsonl$/u,
+        ),
         messages: [expect.objectContaining({ role: "assistant" })],
       }),
       expect.objectContaining({
@@ -1136,7 +1138,9 @@ describe("CodexAppServerEventProjector", () => {
       expect.objectContaining({
         messageCount: 1,
         compactedCount: -1,
-        sessionFile: expect.stringMatching(/^sqlite-transcript:\/\/main\/session-1-.+\.jsonl$/u),
+        transcriptLocator: expect.stringMatching(
+          /^sqlite-transcript:\/\/main\/session-1-.+\.jsonl$/u,
+        ),
       }),
       expect.objectContaining({
         runId: "run-1",

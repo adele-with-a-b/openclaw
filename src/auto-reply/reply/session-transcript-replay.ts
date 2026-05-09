@@ -93,8 +93,8 @@ export async function replayRecentUserAssistantMessages(params: {
   }
 }
 
-function resolveAgentIdFromSessionPath(sessionFile: string): string {
-  void sessionFile;
+function resolveAgentIdFromSessionPath(transcriptLocator: string): string {
+  void transcriptLocator;
   return DEFAULT_AGENT_ID;
 }
 

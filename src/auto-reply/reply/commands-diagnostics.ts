@@ -456,7 +456,7 @@ async function executeCodexDiagnosticsAddon(
     gatewayClientScopes: params.ctx.GatewayClientScopes,
     sessionKey: params.sessionKey,
     sessionId: targetSessionEntry?.sessionId,
-    sessionFile: targetSessionEntry?.sessionFile,
+    transcriptLocator: targetSessionEntry?.transcriptLocator,
     commandBody,
     config: params.cfg,
     from: params.command.from,
@@ -495,11 +495,11 @@ function buildCodexDiagnosticsSessions(
     }
   }
   return Array.from(sessions.entries())
-    .filter(([, entry]) => Boolean(entry.sessionFile))
+    .filter(([, entry]) => Boolean(entry.transcriptLocator))
     .map(([sessionKey, entry]) => ({
       sessionKey,
       sessionId: entry.sessionId,
-      sessionFile: entry.sessionFile,
+      transcriptLocator: entry.transcriptLocator,
       agentHarnessId: entry.agentHarnessId,
       channel: resolveDiagnosticsSessionChannel(entry, params, sessionKey),
       channelId: resolveDiagnosticsSessionChannelId(entry, params, sessionKey),

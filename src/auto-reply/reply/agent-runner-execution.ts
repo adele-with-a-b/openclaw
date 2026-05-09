@@ -1454,7 +1454,7 @@ export async function runAgentTurnWithFallback(params: {
                   sessionKey: params.sessionKey,
                   agentId: params.followupRun.run.agentId,
                   trigger: params.isHeartbeat ? "heartbeat" : "user",
-                  sessionFile: params.followupRun.run.sessionFile,
+                  transcriptLocator: params.followupRun.run.transcriptLocator,
                   workspaceDir: params.followupRun.run.workspaceDir,
                   config: runtimeConfig,
                   prompt: params.commandBody,

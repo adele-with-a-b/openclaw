@@ -294,12 +294,12 @@ export async function runBtwSideQuestion(
     throw new Error("No active session context.");
   }
 
-  const sessionFile = resolveBtwSessionTranscriptPath({
+  const transcriptLocator = resolveBtwSessionTranscriptPath({
     sessionId,
     sessionEntry: params.sessionEntry,
     sessionKey: params.sessionKey,
   });
-  if (!sessionFile) {
+  if (!transcriptLocator) {
     throw new Error("No active session transcript.");
   }
 
@@ -319,7 +319,7 @@ export async function runBtwSideQuestion(
   if (messages.length === 0) {
     messages = await toSimpleContextMessages({
       messages: await readBtwTranscriptMessages({
-        sessionFile,
+        transcriptLocator,
         sessionId,
         snapshotLeafId: activeRunSnapshot?.transcriptLeafId,
       }),

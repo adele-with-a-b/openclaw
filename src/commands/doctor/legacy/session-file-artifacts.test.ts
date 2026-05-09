@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { isPrimaryLegacySessionTranscriptFileName } from "./session-file-artifacts.js";
 
-describe("legacy session file artifacts", () => {
+describe("legacy transcript locator artifacts", () => {
   it("classifies legacy primary transcript files for doctor cleanup", () => {
     expect(isPrimaryLegacySessionTranscriptFileName("abc.jsonl")).toBe(true);
     expect(isPrimaryLegacySessionTranscriptFileName("keep.deleted.keep.jsonl")).toBe(true);

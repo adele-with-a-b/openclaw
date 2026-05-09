@@ -9,7 +9,7 @@ function createParams(
   return {
     sessionId: "session-bridge",
     sessionKey: "agent:main:thread",
-    sessionFile: "sqlite-transcript://main/session-bridge.jsonl",
+    transcriptLocator: "sqlite-transcript://main/session-bridge.jsonl",
     workspaceDir: "/tmp/workspace",
     prompt: "hello",
     timeoutMs: 1000,

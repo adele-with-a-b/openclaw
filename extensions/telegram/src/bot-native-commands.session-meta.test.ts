@@ -494,7 +494,7 @@ describe("registerTelegramNativeCommands — session metadata", () => {
           sessionEntry: {
             ...params.sessionEntry,
             sessionId: params.sessionId,
-            sessionFile: transcriptLocator,
+            transcriptLocator: transcriptLocator,
             updatedAt: Date.now(),
           },
         };
@@ -1163,7 +1163,7 @@ describe("registerTelegramNativeCommands — session metadata", () => {
     expectUnauthorizedNewCommandBlocked(sendMessage);
   });
 
-  it("passes a persisted topic session file to plugin commands", async () => {
+  it("passes a persisted topic transcript locator to plugin commands", async () => {
     sessionMocks.sessionStore.value = {
       "agent:main:telegram:group:-1001234567890:topic:42": {
         sessionId: "sess-topic",
@@ -1211,7 +1211,7 @@ describe("registerTelegramNativeCommands — session metadata", () => {
       expect.objectContaining({
         sessionKey: "agent:main:telegram:group:-1001234567890:topic:42",
         sessionId: "sess-topic",
-        sessionFile: "sqlite-transcript://main/sess-topic-topic-42.jsonl",
+        transcriptLocator: "sqlite-transcript://main/sess-topic-topic-42.jsonl",
         messageThreadId: 42,
       }),
     );

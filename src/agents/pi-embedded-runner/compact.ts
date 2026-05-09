@@ -597,7 +597,7 @@ async function compactEmbeddedPiSessionDirectOnce(
     : resolvedWorkspace;
   await fs.mkdir(effectiveWorkspace, { recursive: true });
   await ensureSessionHeader({
-    sessionFile: params.sessionFile,
+    transcriptLocator: params.transcriptLocator,
     sessionId: params.sessionId,
     cwd: effectiveWorkspace,
     agentId: earlyAgentIds.sessionAgentId,
@@ -952,14 +952,14 @@ async function compactEmbeddedPiSessionDirectOnce(
 
     try {
       await repairTranscriptStateIfNeeded({
-        transcriptPath: params.sessionFile,
+        transcriptPath: params.transcriptLocator,
         debug: (message) => log.debug(message),
         warn: (message) => log.warn(message),
       });
       const transcriptPolicy = runtimePlan.transcript.resolvePolicy(runtimePlanModelContext);
       const sessionManager = guardSessionManager(
         openTranscriptSessionManager({
-          sessionFile: params.sessionFile,
+          transcriptLocator: params.transcriptLocator,
           sessionId: params.sessionId,
           cwd: effectiveWorkspace,
         }),
@@ -982,7 +982,7 @@ async function compactEmbeddedPiSessionDirectOnce(
       checkpointSnapshot = await captureCompactionCheckpointSnapshotAsync({
         agentId: sessionAgentId,
         sessionManager,
-        sessionFile: params.sessionFile,
+        transcriptLocator: params.transcriptLocator,
       });
       compactionSessionManager = sessionManager;
       const settingsManager = createPreparedEmbeddedPiSettingsManager({
@@ -1250,7 +1250,7 @@ async function compactEmbeddedPiSessionDirectOnce(
           if (params.trigger === "manual") {
             try {
               const hardenedBoundary = await hardenManualCompactionBoundary({
-                sessionFile: params.sessionFile,
+                transcriptLocator: params.transcriptLocator,
                 preserveRecentTail:
                   typeof params.config?.agents?.defaults?.compaction?.keepRecentTokens === "number",
               });
@@ -1283,7 +1283,7 @@ async function compactEmbeddedPiSessionDirectOnce(
               transcriptRotation = await rotateTranscriptAfterCompaction({
                 sessionManager: transcriptRotationSessionManager,
                 agentId: sessionAgentId,
-                sessionFile: params.sessionFile,
+                transcriptLocator: params.transcriptLocator,
               });
             } catch (err) {
               log.warn("[compaction] post-compaction transcript rotation failed", {
@@ -1293,7 +1293,8 @@ async function compactEmbeddedPiSessionDirectOnce(
             }
           }
           const activeSessionId = transcriptRotation.sessionId ?? params.sessionId;
-          const activeSessionFile = transcriptRotation.sessionFile ?? params.sessionFile;
+          const activeTranscriptLocator =
+            transcriptRotation.transcriptLocator ?? params.transcriptLocator;
           const activePostLeafId = transcriptRotation.leafId ?? postCompactionLeafId;
           if (transcriptRotation.rotated) {
             log.info(
@@ -1306,7 +1307,7 @@ async function compactEmbeddedPiSessionDirectOnce(
             agentId: sessionAgentId,
             sessionId: activeSessionId,
             sessionKey: params.sessionKey,
-            sessionFile: activeSessionFile,
+            transcriptLocator: activeTranscriptLocator,
           });
           if (params.config && params.sessionKey && checkpointSnapshot) {
             try {
@@ -1322,7 +1323,7 @@ async function compactEmbeddedPiSessionDirectOnce(
                 firstKeptEntryId: effectiveFirstKeptEntryId,
                 tokensBefore: observedTokenCount ?? result.tokensBefore,
                 tokensAfter,
-                postSessionFile: activeSessionFile,
+                postTranscriptLocator: activeTranscriptLocator,
                 postLeafId: activePostLeafId,
                 postEntryId: activePostLeafId,
                 createdAt: compactStartedAt,
@@ -1362,7 +1363,7 @@ async function compactEmbeddedPiSessionDirectOnce(
             messageCountAfter,
             tokensAfter,
             compactedCount,
-            sessionFile: activeSessionFile,
+            transcriptLocator: activeTranscriptLocator,
             summaryLength: typeof result.summary === "string" ? result.summary.length : undefined,
             tokensBefore: result.tokensBefore,
             firstKeptEntryId: effectiveFirstKeptEntryId,
@@ -1378,7 +1379,7 @@ async function compactEmbeddedPiSessionDirectOnce(
               tokensAfter,
               details: result.details,
               sessionId: transcriptRotation.sessionId,
-              sessionFile: transcriptRotation.sessionFile,
+              transcriptLocator: transcriptRotation.transcriptLocator,
             },
           };
         } catch (err) {

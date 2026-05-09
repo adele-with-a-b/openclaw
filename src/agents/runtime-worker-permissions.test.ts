@@ -13,7 +13,7 @@ function createPreparedRun(overrides: Partial<PreparedAgentRun> = {}): PreparedA
     agentId: "main",
     sessionId: "session-permissions",
     sessionKey: "agent:main:main",
-    sessionFile: "sqlite-transcript://main/session-permissions.jsonl",
+    transcriptLocator: "sqlite-transcript://main/session-permissions.jsonl",
     workspaceDir: "/tmp/workspace",
     prompt: "hello",
     timeoutMs: 1000,

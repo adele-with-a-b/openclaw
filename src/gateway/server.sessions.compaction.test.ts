@@ -37,7 +37,7 @@ test("sessions.compaction.* lists checkpoints and branches or restores from pre-
     agentId: "main",
     sessionKey: "agent:main:main",
     entry: sessionStoreEntry(fixture.sessionId, {
-      sessionFile: fixture.sessionFile,
+      transcriptLocator: fixture.transcriptLocator,
       compactionCheckpoints: [
         {
           checkpointId: "checkpoint-1",
@@ -51,12 +51,12 @@ test("sessions.compaction.* lists checkpoints and branches or restores from pre-
           firstKeptEntryId: fixture.preCompactionLeafId,
           preCompaction: {
             sessionId: fixture.preCompactionSessionId,
-            sessionFile: fixture.preCompactionSessionFile,
+            transcriptLocator: fixture.preCompactionTranscriptLocator,
             leafId: fixture.preCompactionLeafId,
           },
           postCompaction: {
             sessionId: fixture.sessionId,
-            sessionFile: fixture.sessionFile,
+            transcriptLocator: fixture.transcriptLocator,
             leafId: fixture.postCompactionLeafId,
             entryId: fixture.postCompactionLeafId,
           },
@@ -109,15 +109,15 @@ test("sessions.compaction.* lists checkpoints and branches or restores from pre-
   const checkpoint = await rpcReq<{
     ok: true;
     key: string;
-    checkpoint: { checkpointId: string; preCompaction: { sessionFile: string } };
+    checkpoint: { checkpointId: string; preCompaction: { transcriptLocator: string } };
   }>(ws, "sessions.compaction.get", {
     key: "main",
     checkpointId: "checkpoint-1",
   });
   expect(checkpoint.ok).toBe(true);
   expect(checkpoint.payload?.checkpoint.checkpointId).toBe("checkpoint-1");
-  expect(checkpoint.payload?.checkpoint.preCompaction.sessionFile).toBe(
-    fixture.preCompactionSessionFile,
+  expect(checkpoint.payload?.checkpoint.preCompaction.transcriptLocator).toBe(
+    fixture.preCompactionTranscriptLocator,
   );
 
   const sessionManagerOpenSpy = vi.spyOn(SessionManager, "open");
@@ -128,7 +128,7 @@ test("sessions.compaction.* lists checkpoints and branches or restores from pre-
         ok: true;
         sourceKey: string;
         key: string;
-        entry: { sessionId: string; sessionFile?: string; parentSessionKey?: string };
+        entry: { sessionId: string; transcriptLocator?: string; parentSessionKey?: string };
       }>
     >
   >;
@@ -137,7 +137,7 @@ test("sessions.compaction.* lists checkpoints and branches or restores from pre-
       ok: true;
       sourceKey: string;
       key: string;
-      entry: { sessionId: string; sessionFile?: string; parentSessionKey?: string };
+      entry: { sessionId: string; transcriptLocator?: string; parentSessionKey?: string };
     }>(ws, "sessions.compaction.branch", {
       key: "main",
       checkpointId: "checkpoint-1",
@@ -151,11 +151,11 @@ test("sessions.compaction.* lists checkpoints and branches or restores from pre-
   expect(branched.ok).toBe(true);
   expect(branched.payload?.sourceKey).toBe("agent:main:main");
   expect(branched.payload?.entry.parentSessionKey).toBe("agent:main:main");
-  const branchedSessionFile = branched.payload?.entry.sessionFile;
-  if (!branchedSessionFile) {
-    throw new Error("expected branched compaction session file");
+  const branchedTranscriptLocator = branched.payload?.entry.transcriptLocator;
+  if (!branchedTranscriptLocator) {
+    throw new Error("expected branched compaction transcript locator");
   }
-  const branchedSession = await readTranscriptState(branchedSessionFile);
+  const branchedSession = await readTranscriptState(branchedTranscriptLocator);
   expect(branchedSession.getEntries()).toHaveLength(
     fixture.preCompactionSession.getEntries().length,
   );
@@ -175,7 +175,7 @@ test("sessions.compaction.* lists checkpoints and branches or restores from pre-
         ok: true;
         key: string;
         sessionId: string;
-        entry: { sessionId: string; sessionFile?: string; compactionCheckpoints?: unknown[] };
+        entry: { sessionId: string; transcriptLocator?: string; compactionCheckpoints?: unknown[] };
       }>
     >
   >;
@@ -184,7 +184,7 @@ test("sessions.compaction.* lists checkpoints and branches or restores from pre-
       ok: true;
       key: string;
       sessionId: string;
-      entry: { sessionId: string; sessionFile?: string; compactionCheckpoints?: unknown[] };
+      entry: { sessionId: string; transcriptLocator?: string; compactionCheckpoints?: unknown[] };
     }>(ws, "sessions.compaction.restore", {
       key: "main",
       checkpointId: "checkpoint-1",
@@ -199,11 +199,11 @@ test("sessions.compaction.* lists checkpoints and branches or restores from pre-
   expect(restored.payload?.key).toBe("agent:main:main");
   expect(restored.payload?.sessionId).not.toBe(fixture.sessionId);
   expect(restored.payload?.entry.compactionCheckpoints).toHaveLength(1);
-  const restoredSessionFile = restored.payload?.entry.sessionFile;
-  if (!restoredSessionFile) {
-    throw new Error("expected restored compaction session file");
+  const restoredTranscriptLocator = restored.payload?.entry.transcriptLocator;
+  if (!restoredTranscriptLocator) {
+    throw new Error("expected restored compaction transcript locator");
   }
-  const restoredSession = await readTranscriptState(restoredSessionFile);
+  const restoredSession = await readTranscriptState(restoredTranscriptLocator);
   expect(restoredSession.getEntries()).toHaveLength(
     fixture.preCompactionSession.getEntries().length,
   );
@@ -217,11 +217,11 @@ test("sessions.compaction.* lists checkpoints and branches or restores from pre-
 
 test("sessions.compact without maxLines runs embedded manual compaction for checkpoint-capable flows", async () => {
   const { dir } = await createSessionStoreDir();
-  const sessionFile = sqliteTranscript("sess-main");
+  const transcriptLocator = sqliteTranscript("sess-main");
   replaceSqliteSessionTranscriptEvents({
     agentId: DEFAULT_AGENT_ID,
     sessionId: "sess-main",
-    transcriptPath: sessionFile,
+    transcriptPath: transcriptLocator,
     events: [
       {
         type: "session",
@@ -242,7 +242,7 @@ test("sessions.compact without maxLines runs embedded manual compaction for chec
     agentId: "main",
     sessionKey: "agent:main:main",
     entry: sessionStoreEntry("sess-main", {
-      sessionFile,
+      transcriptLocator,
       thinkingLevel: "medium",
       reasoningLevel: "stream",
     }),
@@ -266,7 +266,7 @@ test("sessions.compact without maxLines runs embedded manual compaction for chec
     expect.objectContaining({
       sessionId: "sess-main",
       sessionKey: "agent:main:main",
-      sessionFile,
+      transcriptLocator,
       config: expect.any(Object),
       provider: expect.any(String),
       model: expect.any(String),

@@ -25,7 +25,7 @@ type ProjectedAttemptResult = ReturnType<CodexAppServerEventProjector["buildResu
 async function createParams(): Promise<EmbeddedRunAttemptParams> {
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-codex-outcome-contract-"));
   tempDirs.add(tempDir);
-  const sessionFile = createSqliteSessionTranscriptLocator({
+  const transcriptLocator = createSqliteSessionTranscriptLocator({
     agentId: "main",
     sessionId: OUTCOME_FALLBACK_RUNTIME_CONTRACT.sessionId,
   });
@@ -33,7 +33,7 @@ async function createParams(): Promise<EmbeddedRunAttemptParams> {
     prompt: OUTCOME_FALLBACK_RUNTIME_CONTRACT.prompt,
     sessionId: OUTCOME_FALLBACK_RUNTIME_CONTRACT.sessionId,
     sessionKey: OUTCOME_FALLBACK_RUNTIME_CONTRACT.sessionKey,
-    sessionFile,
+    transcriptLocator,
     workspaceDir: tempDir,
     runId: OUTCOME_FALLBACK_RUNTIME_CONTRACT.runId,
     provider: "codex",

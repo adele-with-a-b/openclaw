@@ -34,7 +34,7 @@ test("sessions.create stores dashboard session model and parent linkage, and cre
       providerOverride?: string;
       modelOverride?: string;
       parentSessionKey?: string;
-      sessionFile?: string;
+      transcriptLocator?: string;
     };
   }>("sessions.create", {
     agentId: "ops",
@@ -49,7 +49,7 @@ test("sessions.create stores dashboard session model and parent linkage, and cre
   expect(created.payload?.entry?.providerOverride).toBe("openai");
   expect(created.payload?.entry?.modelOverride).toBe("gpt-test-a");
   expect(created.payload?.entry?.parentSessionKey).toBe("agent:main:main");
-  requireNonEmptyString(created.payload?.entry?.sessionFile, "created session file");
+  requireNonEmptyString(created.payload?.entry?.transcriptLocator, "created transcript locator");
   expect(created.payload?.sessionId).toMatch(
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
   );
@@ -63,7 +63,7 @@ test("sessions.create stores dashboard session model and parent linkage, and cre
     modelOverride: "gpt-test-a",
     parentSessionKey: "agent:main:main",
   });
-  expect(created.payload?.entry?.sessionFile).toBe(stored?.sessionFile);
+  expect(created.payload?.entry?.transcriptLocator).toBe(stored?.transcriptLocator);
 
   const [header] = loadSqliteSessionTranscriptEvents({
     agentId: "ops",
@@ -105,7 +105,7 @@ test("sessions.create scopes the main alias to the requested agent", async () =>
     key?: string;
     sessionId?: string;
     entry?: {
-      sessionFile?: string;
+      transcriptLocator?: string;
     };
   }>("sessions.create", {
     key: "main",
@@ -114,7 +114,10 @@ test("sessions.create scopes the main alias to the requested agent", async () =>
 
   expect(created.ok, JSON.stringify(created.error)).toBe(true);
   expect(created.payload?.key).toBe("agent:longmemeval:main");
-  requireNonEmptyString(created.payload?.entry?.sessionFile, "longmemeval session file");
+  requireNonEmptyString(
+    created.payload?.entry?.transcriptLocator,
+    "longmemeval transcript locator",
+  );
 
   expect(
     getSessionEntry({ agentId: "longmemeval", sessionKey: "agent:longmemeval:main" })?.sessionId,
@@ -131,7 +134,7 @@ test("sessions.create preserves global and unknown sentinel keys", async () => {
     key?: string;
     sessionId?: string;
     entry?: {
-      sessionFile?: string;
+      transcriptLocator?: string;
     };
   }>("sessions.create", {
     key: "global",
@@ -140,13 +143,16 @@ test("sessions.create preserves global and unknown sentinel keys", async () => {
 
   expect(globalCreated.ok).toBe(true);
   expect(globalCreated.payload?.key).toBe("global");
-  requireNonEmptyString(globalCreated.payload?.entry?.sessionFile, "global session file");
+  requireNonEmptyString(
+    globalCreated.payload?.entry?.transcriptLocator,
+    "global transcript locator",
+  );
 
   const unknownCreated = await directSessionReq<{
     key?: string;
     sessionId?: string;
     entry?: {
-      sessionFile?: string;
+      transcriptLocator?: string;
     };
   }>("sessions.create", {
     key: "unknown",
@@ -155,7 +161,10 @@ test("sessions.create preserves global and unknown sentinel keys", async () => {
 
   expect(unknownCreated.ok).toBe(true);
   expect(unknownCreated.payload?.key).toBe("unknown");
-  requireNonEmptyString(unknownCreated.payload?.entry?.sessionFile, "unknown session file");
+  requireNonEmptyString(
+    unknownCreated.payload?.entry?.transcriptLocator,
+    "unknown transcript locator",
+  );
 
   expect(getSessionEntry({ agentId: "main", sessionKey: "global" })?.sessionId).toBe(
     globalCreated.payload?.sessionId,

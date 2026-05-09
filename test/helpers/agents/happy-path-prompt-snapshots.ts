@@ -278,7 +278,7 @@ function createAttempt(params: {
     agentId: "main",
     agentDir: AGENT_DIR,
     workspaceDir: WORKSPACE_DIR,
-    sessionFile: SESSION_FILE,
+    transcriptLocator: SESSION_FILE,
     sessionKey: params.sessionKey,
     sessionId: `session-${params.scenario.id}`,
     runId: `run-${params.scenario.id}`,

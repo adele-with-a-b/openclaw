@@ -72,11 +72,11 @@ async function jsonlFileHasAssistantMessage(filePath: string | undefined): Promi
   }
 }
 
-function sqliteTranscriptHasAssistantMessage(sessionFile: string | undefined): boolean {
-  if (!sessionFile) {
+function sqliteTranscriptHasAssistantMessage(transcriptLocator: string | undefined): boolean {
+  if (!transcriptLocator) {
     return false;
   }
-  const scope = resolveSqliteSessionTranscriptScopeForPath({ transcriptPath: sessionFile });
+  const scope = resolveSqliteSessionTranscriptScopeForPath({ transcriptPath: transcriptLocator });
   if (!scope) {
     return false;
   }

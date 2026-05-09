@@ -167,7 +167,7 @@ async function resolveRealtimeVoiceAgentConsultSessionEntry(params: {
             ...existing,
             ...deliveryFields,
             sessionId: fork.sessionId,
-            sessionFile: fork.sessionFile,
+            transcriptLocator: fork.transcriptLocator,
             spawnedBy: requesterSessionKey,
             forkedFromParent: true,
             updatedAt: now,
@@ -249,10 +249,10 @@ export async function consultRealtimeVoiceAgent(params: {
     resolvedDeliveryContext ?? deliveryContextFromSession(sessionEntry);
   const sessionId = sessionEntry.sessionId;
 
-  const persistedSessionFile = sessionEntry.sessionFile?.trim();
-  const sessionFile =
-    persistedSessionFile && isSqliteSessionTranscriptLocator(persistedSessionFile)
-      ? persistedSessionFile
+  const persistedTranscriptLocator = sessionEntry.transcriptLocator?.trim();
+  const transcriptLocator =
+    persistedTranscriptLocator && isSqliteSessionTranscriptLocator(persistedTranscriptLocator)
+      ? persistedTranscriptLocator
       : createSqliteSessionTranscriptLocator({
           agentId,
           sessionId,
@@ -272,7 +272,7 @@ export async function consultRealtimeVoiceAgent(params: {
       consultDeliveryContext?.threadId != null
         ? String(consultDeliveryContext.threadId)
         : undefined,
-    sessionFile,
+    transcriptLocator,
     workspaceDir,
     config: params.cfg,
     prompt: buildRealtimeVoiceAgentConsultPrompt({

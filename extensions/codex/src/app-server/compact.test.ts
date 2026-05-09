@@ -15,28 +15,28 @@ import {
 
 let tempDir: string;
 
-function testSessionFile(suffix = "session-1"): string {
+function testTranscriptLocator(suffix = "session-1"): string {
   return createSqliteSessionTranscriptLocator({ agentId: "main", sessionId: suffix });
 }
 
 async function writeTestBinding(options: { authProfileId?: string } = {}): Promise<string> {
-  const sessionFile = testSessionFile();
+  const transcriptLocator = testTranscriptLocator();
   await writeCodexAppServerBinding(
-    { sessionKey: "agent:main:session-1", sessionFile },
+    { sessionKey: "agent:main:session-1", transcriptLocator },
     {
       threadId: "thread-1",
       cwd: tempDir,
       ...options,
     },
   );
-  return sessionFile;
+  return transcriptLocator;
 }
 
-function startCompaction(sessionFile: string, options: { currentTokenCount?: number } = {}) {
+function startCompaction(transcriptLocator: string, options: { currentTokenCount?: number } = {}) {
   return maybeCompactCodexAppServerSession({
     sessionId: "session-1",
     sessionKey: "agent:main:session-1",
-    sessionFile,
+    transcriptLocator,
     workspaceDir: tempDir,
     ...options,
   });
@@ -57,9 +57,9 @@ describe("maybeCompactCodexAppServerSession", () => {
   it("waits for native app-server compaction before reporting success", async () => {
     const fake = createFakeCodexClient();
     __testing.setCodexAppServerClientFactoryForTests(async () => fake.client);
-    const sessionFile = await writeTestBinding();
+    const transcriptLocator = await writeTestBinding();
 
-    const pendingResult = startCompaction(sessionFile, { currentTokenCount: 123 });
+    const pendingResult = startCompaction(transcriptLocator, { currentTokenCount: 123 });
     await vi.waitFor(() => {
       expect(fake.request).toHaveBeenCalledWith("thread/compact/start", { threadId: "thread-1" });
     });
@@ -95,9 +95,9 @@ describe("maybeCompactCodexAppServerSession", () => {
   it("accepts native context-compaction item completion as success", async () => {
     const fake = createFakeCodexClient();
     __testing.setCodexAppServerClientFactoryForTests(async () => fake.client);
-    const sessionFile = await writeTestBinding();
+    const transcriptLocator = await writeTestBinding();
 
-    const pendingResult = startCompaction(sessionFile);
+    const pendingResult = startCompaction(transcriptLocator);
     await vi.waitFor(() => {
       expect(fake.request).toHaveBeenCalledWith("thread/compact/start", { threadId: "thread-1" });
     });
@@ -129,9 +129,9 @@ describe("maybeCompactCodexAppServerSession", () => {
       seenAuthProfileId = authProfileId;
       return fake.client;
     });
-    const sessionFile = await writeTestBinding({ authProfileId: "openai-codex:work" });
+    const transcriptLocator = await writeTestBinding({ authProfileId: "openai-codex:work" });
 
-    const pendingResult = startCompaction(sessionFile);
+    const pendingResult = startCompaction(transcriptLocator);
     await vi.waitFor(() => {
       expect(fake.request).toHaveBeenCalledWith("thread/compact/start", { threadId: "thread-1" });
     });
@@ -147,10 +147,10 @@ describe("maybeCompactCodexAppServerSession", () => {
   it("looks up native compaction bindings by OpenClaw session key", async () => {
     const fake = createFakeCodexClient();
     __testing.setCodexAppServerClientFactoryForTests(async () => fake.client);
-    const sessionFile = await writeTestBinding();
-    await expect(readCodexAppServerBinding(sessionFile)).resolves.toBeUndefined();
+    const transcriptLocator = await writeTestBinding();
+    await expect(readCodexAppServerBinding(transcriptLocator)).resolves.toBeUndefined();
 
-    const pendingResult = startCompaction(sessionFile);
+    const pendingResult = startCompaction(transcriptLocator);
     await vi.waitFor(() => {
       expect(fake.request).toHaveBeenCalledWith("thread/compact/start", { threadId: "thread-1" });
     });
@@ -169,8 +169,8 @@ describe("maybeCompactCodexAppServerSession", () => {
     const fake = createFakeCodexClient();
     const factory = vi.fn(async () => fake.client);
     __testing.setCodexAppServerClientFactoryForTests(factory);
-    const sessionFile = testSessionFile("auth-profile-mismatch");
-    await writeCodexAppServerBinding(sessionFile, {
+    const transcriptLocator = testTranscriptLocator("auth-profile-mismatch");
+    await writeCodexAppServerBinding(transcriptLocator, {
       threadId: "thread-1",
       cwd: tempDir,
       authProfileId: "openai-codex:binding",
@@ -179,7 +179,7 @@ describe("maybeCompactCodexAppServerSession", () => {
     const result = await maybeCompactCodexAppServerSession({
       sessionId: "session-1",
       sessionKey: "agent:main:session-1",
-      sessionFile,
+      transcriptLocator,
       workspaceDir: tempDir,
       authProfileId: "openai-codex:runtime",
     });
@@ -195,7 +195,7 @@ describe("maybeCompactCodexAppServerSession", () => {
   it("prefers owning context-engine compaction and records native status separately", async () => {
     const fake = createFakeCodexClient();
     __testing.setCodexAppServerClientFactoryForTests(async () => fake.client);
-    const sessionFile = await writeTestBinding();
+    const transcriptLocator = await writeTestBinding();
     const maintain = vi.fn(async () => ({ changed: false, bytesFreed: 0, rewrittenEntries: 0 }));
     const contextEngine: ContextEngine = {
       info: { id: "lossless-claw", name: "Lossless Claw", ownsCompaction: true },
@@ -217,7 +217,7 @@ describe("maybeCompactCodexAppServerSession", () => {
     const pendingResult = maybeCompactCodexAppServerSession({
       sessionId: "session-1",
       sessionKey: "agent:main:session-1",
-      sessionFile,
+      transcriptLocator,
       workspaceDir: tempDir,
       contextEngine,
       contextTokenBudget: 777,
@@ -278,7 +278,7 @@ describe("maybeCompactCodexAppServerSession", () => {
   it("still runs native compaction when context-engine maintenance fails", async () => {
     const fake = createFakeCodexClient();
     __testing.setCodexAppServerClientFactoryForTests(async () => fake.client);
-    const sessionFile = await writeTestBinding();
+    const transcriptLocator = await writeTestBinding();
     const contextEngine: ContextEngine = {
       info: { id: "lossless-claw", name: "Lossless Claw", ownsCompaction: true },
       assemble: vi.fn() as never,
@@ -300,7 +300,7 @@ describe("maybeCompactCodexAppServerSession", () => {
     const pendingResult = maybeCompactCodexAppServerSession({
       sessionId: "session-1",
       sessionKey: "agent:main:session-1",
-      sessionFile,
+      transcriptLocator,
       workspaceDir: tempDir,
       contextEngine,
     });
@@ -329,7 +329,7 @@ describe("maybeCompactCodexAppServerSession", () => {
   it("records native compaction status when primary compaction has no result payload", async () => {
     const fake = createFakeCodexClient();
     __testing.setCodexAppServerClientFactoryForTests(async () => fake.client);
-    const sessionFile = await writeTestBinding();
+    const transcriptLocator = await writeTestBinding();
     const contextEngine: ContextEngine = {
       info: { id: "lossless-claw", name: "Lossless Claw", ownsCompaction: true },
       assemble: vi.fn() as never,
@@ -344,7 +344,7 @@ describe("maybeCompactCodexAppServerSession", () => {
     const pendingResult = maybeCompactCodexAppServerSession({
       sessionId: "session-1",
       sessionKey: "agent:main:session-1",
-      sessionFile,
+      transcriptLocator,
       workspaceDir: tempDir,
       contextEngine,
       currentTokenCount: 222,
@@ -376,7 +376,7 @@ describe("maybeCompactCodexAppServerSession", () => {
   it("reports context-engine compaction errors without skipping native compaction", async () => {
     const fake = createFakeCodexClient();
     __testing.setCodexAppServerClientFactoryForTests(async () => fake.client);
-    const sessionFile = await writeTestBinding();
+    const transcriptLocator = await writeTestBinding();
     const contextEngine: ContextEngine = {
       info: { id: "lossless-claw", name: "Lossless Claw", ownsCompaction: true },
       assemble: vi.fn() as never,
@@ -389,7 +389,7 @@ describe("maybeCompactCodexAppServerSession", () => {
     const pendingResult = maybeCompactCodexAppServerSession({
       sessionId: "session-1",
       sessionKey: "agent:main:session-1",
-      sessionFile,
+      transcriptLocator,
       workspaceDir: tempDir,
       contextEngine,
       currentTokenCount: 222,
@@ -440,7 +440,7 @@ describe("maybeCompactCodexAppServerSession", () => {
     const result = await maybeCompactCodexAppServerSession({
       sessionId: "session-1",
       sessionKey: "agent:main:session-1",
-      sessionFile: path.join(tempDir, "missing-binding.jsonl"),
+      transcriptLocator: path.join(tempDir, "missing-binding.jsonl"),
       workspaceDir: tempDir,
       contextEngine,
     });

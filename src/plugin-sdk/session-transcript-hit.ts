@@ -60,9 +60,9 @@ export function resolveTranscriptStemToSessionKeys(params: {
   const matches: string[] = [];
 
   for (const [sessionKey, entry] of Object.entries(store)) {
-    const sessionFile = normalizeOptionalString(entry.sessionFile);
-    if (sessionFile) {
-      const base = path.basename(sessionFile);
+    const transcriptLocator = normalizeOptionalString(entry.transcriptLocator);
+    if (transcriptLocator) {
+      const base = path.basename(transcriptLocator);
       const fileStem = base.endsWith(".jsonl") ? base.slice(0, -".jsonl".length) : base;
       if (fileStem === params.stem) {
         matches.push(sessionKey);

@@ -23,7 +23,7 @@ export function createTestFollowupRun(overrides: Partial<FollowupRun["run"]> = {
       sessionId: "session",
       sessionKey: "main",
       messageProvider: "whatsapp",
-      sessionFile: TEST_FOLLOWUP_SESSION_FILE,
+      transcriptLocator: TEST_FOLLOWUP_SESSION_FILE,
       workspaceDir: "/tmp",
       config: {},
       skillsSnapshot: {},

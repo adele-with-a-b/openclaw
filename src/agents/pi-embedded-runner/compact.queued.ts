@@ -129,7 +129,7 @@ export async function compactEmbeddedPiSession(
         checkpointSnapshot = engineOwnsCompaction
           ? await captureCompactionCheckpointSnapshotAsync({
               agentId: sessionAgentId,
-              sessionFile: params.sessionFile,
+              transcriptLocator: params.transcriptLocator,
             })
           : null;
         const hookRunner = engineOwnsCompaction
@@ -146,14 +146,14 @@ export async function compactEmbeddedPiSession(
         };
         const runtimeContext = contextEngineRuntimeContext;
         // Engine-owned compaction doesn't load the transcript at this level, so
-        // message counts are unavailable. We pass sessionFile so hook subscribers
+        // message counts are unavailable. We pass transcriptLocator so hook subscribers
         // can read the transcript themselves if they need exact counts.
         if (hookRunner?.hasHooks?.("before_compaction") && hookRunner.runBeforeCompaction) {
           try {
             await hookRunner.runBeforeCompaction(
               {
                 messageCount: -1,
-                sessionFile: params.sessionFile,
+                transcriptLocator: params.transcriptLocator,
               },
               hookCtx,
             );
@@ -166,7 +166,7 @@ export async function compactEmbeddedPiSession(
         const result = await contextEngine.compact({
           sessionId: params.sessionId,
           sessionKey: params.sessionKey,
-          sessionFile: params.sessionFile,
+          transcriptLocator: params.transcriptLocator,
           tokenBudget: contextTokenBudget,
           currentTokenCount: params.currentTokenCount,
           compactionTarget: params.trigger === "manual" ? "threshold" : "budget",
@@ -175,23 +175,26 @@ export async function compactEmbeddedPiSession(
           runtimeContext,
         });
         const delegatedSessionId = result.result?.sessionId;
-        const delegatedSessionFile = result.result?.sessionFile;
+        const delegatedTranscriptLocator = result.result?.transcriptLocator;
         const delegatedRotatedTranscript =
           (typeof delegatedSessionId === "string" && delegatedSessionId !== params.sessionId) ||
-          (typeof delegatedSessionFile === "string" && delegatedSessionFile !== params.sessionFile);
+          (typeof delegatedTranscriptLocator === "string" &&
+            delegatedTranscriptLocator !== params.transcriptLocator);
         let postCompactionSessionId = delegatedSessionId ?? params.sessionId;
-        let postCompactionSessionFile = delegatedSessionFile ?? params.sessionFile;
+        let postCompactionTranscriptLocator =
+          delegatedTranscriptLocator ?? params.transcriptLocator;
         let postCompactionLeafId: string | undefined;
         if (result.ok && result.compacted) {
           if (shouldRotateCompactionTranscript(params.config) && !delegatedRotatedTranscript) {
             try {
               const rotation = await rotateTranscriptFileAfterCompaction({
                 agentId: agentIds.sessionAgentId,
-                sessionFile: params.sessionFile,
+                transcriptLocator: params.transcriptLocator,
               });
               if (rotation.rotated) {
                 postCompactionSessionId = rotation.sessionId ?? postCompactionSessionId;
-                postCompactionSessionFile = rotation.sessionFile ?? postCompactionSessionFile;
+                postCompactionTranscriptLocator =
+                  rotation.transcriptLocator ?? postCompactionTranscriptLocator;
                 postCompactionLeafId = rotation.leafId;
                 log.info(
                   `[compaction] rotated active transcript after context-engine compaction ` +
@@ -208,7 +211,7 @@ export async function compactEmbeddedPiSession(
             try {
               const postLeafId =
                 postCompactionLeafId ??
-                (await readSessionLeafIdFromTranscriptAsync(postCompactionSessionFile)) ??
+                (await readSessionLeafIdFromTranscriptAsync(postCompactionTranscriptLocator)) ??
                 undefined;
               const storedCheckpoint = await persistSessionCompactionCheckpoint({
                 cfg: params.config,
@@ -222,7 +225,7 @@ export async function compactEmbeddedPiSession(
                 firstKeptEntryId: result.result?.firstKeptEntryId,
                 tokensBefore: result.result?.tokensBefore,
                 tokensAfter: result.result?.tokensAfter,
-                postSessionFile: postCompactionSessionFile,
+                postTranscriptLocator: postCompactionTranscriptLocator,
                 postLeafId,
                 postEntryId: postLeafId,
               });
@@ -238,7 +241,7 @@ export async function compactEmbeddedPiSession(
             sessionAgentId: agentIds.sessionAgentId,
             sessionId: postCompactionSessionId,
             sessionKey: params.sessionKey,
-            sessionFile: postCompactionSessionFile,
+            transcriptLocator: postCompactionTranscriptLocator,
             reason: "compaction",
             runtimeContext,
             config: params.config,
@@ -250,7 +253,7 @@ export async function compactEmbeddedPiSession(
             agentId: agentIds.sessionAgentId,
             sessionId: postCompactionSessionId,
             sessionKey: params.sessionKey,
-            sessionFile: postCompactionSessionFile,
+            transcriptLocator: postCompactionTranscriptLocator,
           });
         }
         if (
@@ -269,7 +272,7 @@ export async function compactEmbeddedPiSession(
                 messageCount: -1,
                 compactedCount: -1,
                 tokenCount: result.result?.tokensAfter,
-                sessionFile: postCompactionSessionFile,
+                transcriptLocator: postCompactionTranscriptLocator,
               },
               afterHookCtx,
             );
@@ -293,8 +296,8 @@ export async function compactEmbeddedPiSession(
                 ...(postCompactionSessionId !== params.sessionId
                   ? { sessionId: postCompactionSessionId }
                   : {}),
-                ...(postCompactionSessionFile !== params.sessionFile
-                  ? { sessionFile: postCompactionSessionFile }
+                ...(postCompactionTranscriptLocator !== params.transcriptLocator
+                  ? { transcriptLocator: postCompactionTranscriptLocator }
                   : {}),
               }
             : undefined,

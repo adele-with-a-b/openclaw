@@ -10,7 +10,7 @@ function createAttempt(
 ): AgentHarnessAttemptParams {
   return {
     sessionId: "session-1",
-    sessionFile: "sqlite-transcript://main/session-1.jsonl",
+    transcriptLocator: "sqlite-transcript://main/session-1.jsonl",
     workspaceDir: "/tmp/workspace",
     prompt: "hello",
     timeoutMs: 1000,

@@ -83,8 +83,8 @@ Per agent, on the Gateway host:
   sources after durable verification. Gateway startup leaves legacy indexes
   alone.
 - Transcripts: runtime transcript events live in the per-agent database
-  (`transcript_events` and `transcript_event_identities`). Session file values
-  are canonical `sqlite-transcript://<agentId>/<sessionId>.jsonl` locators;
+  (`transcript_events` and `transcript_event_identities`). Session rows store
+  canonical `sqlite-transcript://<agentId>/<sessionId>.jsonl` transcript locators;
   JSONL files are doctor migration inputs, not runtime sidecars.
   - Telegram topic handles: `.../<sessionId>-topic-<threadId>.jsonl`
 
@@ -185,7 +185,7 @@ Key fields (not exhaustive):
   time for idle freshness.
 - `updatedAt`: last store-row mutation timestamp, used for listing and
   bookkeeping. It is not the authority for daily/idle reset freshness.
-- `sessionFile`: optional explicit transcript path override
+- `transcriptLocator`: optional explicit SQLite transcript locator override
 - `chatType`: `direct | group | room` (helps UIs and send policy)
 - `provider`, `subject`, `room`, `space`, `displayName`: metadata for group/channel labeling
 - Toggles:

@@ -75,10 +75,10 @@ export function isSqliteSessionTranscriptLocator(locator: string | undefined): b
 
 export function resolveSessionTranscriptLocator(
   sessionId: string,
-  entry?: { sessionFile?: string },
+  entry?: { transcriptLocator?: string },
   opts?: SessionTranscriptLocatorOptions,
 ): string {
-  const candidate = entry?.sessionFile?.trim();
+  const candidate = entry?.transcriptLocator?.trim();
   const parsed = candidate ? parseSqliteSessionTranscriptLocator(candidate) : undefined;
   if (
     parsed?.sessionId === sessionId &&

@@ -48,7 +48,7 @@ async function main() {
     sessionKey: "agent:main:main",
     entry: {
       sessionId: "sess-main",
-      sessionFile: transcriptPath,
+      transcriptLocator: transcriptPath,
       updatedAt: now,
       deliveryContext: {
         channel: "imessage",

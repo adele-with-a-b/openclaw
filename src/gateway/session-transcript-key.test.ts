@@ -83,12 +83,12 @@ describe("resolveSessionKeyForTranscriptLocator", () => {
       entries: store,
     }));
     resolveSessionTranscriptCandidatesMock.mockImplementation(
-      (sessionId: string, sessionFile?: string) => {
+      (sessionId: string, transcriptLocator?: string) => {
         if (sessionId === "sess-alpha") {
           return [locator("sess-alpha")];
         }
         if (sessionId === "sess-beta") {
-          return sessionFile ? [sessionFile] : [locator("shared")];
+          return transcriptLocator ? [transcriptLocator] : [locator("shared")];
         }
         if (sessionId === "sess-alpha-2") {
           return [locator("shared")];
@@ -104,7 +104,7 @@ describe("resolveSessionKeyForTranscriptLocator", () => {
       "agent:main:beta": {
         sessionId: "sess-beta",
         updatedAt: now + 1,
-        sessionFile: locator("sess-beta"),
+        transcriptLocator: locator("sess-beta"),
       },
     };
 

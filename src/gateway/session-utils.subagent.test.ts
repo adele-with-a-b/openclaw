@@ -65,7 +65,7 @@ describe("listSessionsFromStore subagent metadata", () => {
     const store: Record<string, SessionEntry> = {
       "agent:main:newest": {
         sessionId: "newest-session",
-        sessionFile: createSqliteSessionTranscriptLocator({
+        transcriptLocator: createSqliteSessionTranscriptLocator({
           agentId: "main",
           sessionId: "newest-session",
         }),
@@ -73,7 +73,7 @@ describe("listSessionsFromStore subagent metadata", () => {
       } as SessionEntry,
       "agent:main:middle": {
         sessionId: "middle-session",
-        sessionFile: createSqliteSessionTranscriptLocator({
+        transcriptLocator: createSqliteSessionTranscriptLocator({
           agentId: "main",
           sessionId: "middle-session",
         }),
@@ -81,7 +81,7 @@ describe("listSessionsFromStore subagent metadata", () => {
       } as SessionEntry,
       "agent:main:oldest": {
         sessionId: "old-session",
-        sessionFile: createSqliteSessionTranscriptLocator({
+        transcriptLocator: createSqliteSessionTranscriptLocator({
           agentId: "main",
           sessionId: "old-session",
         }),

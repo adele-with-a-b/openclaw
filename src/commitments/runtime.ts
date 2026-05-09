@@ -180,7 +180,7 @@ function openTerminalFailureCooldown(agentId: string, error: unknown): void {
   });
 }
 
-function resolveExtractionSessionFile(agentId: string, runId: string): string {
+function resolveExtractionTranscriptLocator(agentId: string, runId: string): string {
   return createSqliteSessionTranscriptLocator({ agentId, sessionId: runId });
 }
 
@@ -222,7 +222,7 @@ async function defaultExtractBatch(params: {
     sessionKey: `agent:${first.agentId}:commitments:${runId}`,
     agentId: first.agentId,
     trigger: "manual",
-    sessionFile: resolveExtractionSessionFile(first.agentId, runId),
+    transcriptLocator: resolveExtractionTranscriptLocator(first.agentId, runId),
     workspaceDir: resolveAgentWorkspaceDir(cfg, first.agentId),
     config: cfg,
     provider: modelRef.provider,

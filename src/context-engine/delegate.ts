@@ -54,7 +54,7 @@ export async function delegateCompactionToRuntime(
   const result = await compactEmbeddedPiSessionDirect({
     ...runtimeContext,
     sessionId: params.sessionId,
-    sessionFile: params.sessionFile,
+    transcriptLocator: params.transcriptLocator,
     tokenBudget: params.tokenBudget,
     ...(currentTokenCount !== undefined ? { currentTokenCount } : {}),
     force: params.force,
@@ -75,7 +75,7 @@ export async function delegateCompactionToRuntime(
           tokensAfter: result.result.tokensAfter,
           details: result.result.details,
           sessionId: result.result.sessionId,
-          sessionFile: result.result.sessionFile,
+          transcriptLocator: result.result.transcriptLocator,
         }
       : undefined,
   };

@@ -279,7 +279,7 @@ describe("buildExportSessionReply", () => {
     expect(reply.text).toContain("✅ Session exported!");
     expect(hoisted.exportSqliteSessionTranscriptJsonlMock).toHaveBeenCalledWith({
       agentId: "target",
-      sessionFile: "sqlite-transcript://target/session-1.jsonl",
+      transcriptLocator: "sqlite-transcript://target/session-1.jsonl",
       sessionId: "session-1",
     });
     const html = hoisted.writeFileMock.mock.calls[0]?.[1];

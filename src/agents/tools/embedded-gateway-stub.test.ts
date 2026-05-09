@@ -7,7 +7,10 @@ const runtime = vi.hoisted(() => ({
   resolveSessionAgentId: vi.fn(() => "main"),
   loadSessionEntry: vi.fn(() => ({
     cfg: {},
-    entry: { sessionId: "sess-main", sessionFile: "sqlite-transcript://main/sess-main.jsonl" },
+    entry: {
+      sessionId: "sess-main",
+      transcriptLocator: "sqlite-transcript://main/sess-main.jsonl",
+    },
   })),
   resolveSessionModelRef: vi.fn(() => ({ provider: "openai" })),
   readSessionMessagesAsync: vi.fn(async (): Promise<unknown[]> => []),

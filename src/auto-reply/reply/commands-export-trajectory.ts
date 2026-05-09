@@ -135,7 +135,7 @@ export async function buildExportTrajectoryReply(
   if (isReplyPayload(sessionTarget)) {
     return sessionTarget;
   }
-  const { agentId, entry, sessionFile } = sessionTarget;
+  const { agentId, entry, transcriptLocator } = sessionTarget;
 
   if (!hasSqliteSessionTranscriptEvents({ agentId, sessionId: entry.sessionId })) {
     return {
@@ -160,7 +160,7 @@ export async function buildExportTrajectoryReply(
   try {
     summary = await exportTrajectoryForCommand({
       outputDir,
-      sessionFile,
+      transcriptLocator,
       sessionId: entry.sessionId,
       sessionKey: params.sessionKey,
       workspaceDir: params.workspaceDir,

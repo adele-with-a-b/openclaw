@@ -53,7 +53,7 @@ describe("resetReplyRunSession", () => {
     const sessionEntry: SessionEntry = {
       sessionId: "session",
       updatedAt: 1,
-      sessionFile: path.join(transcriptDir, "session.jsonl"),
+      transcriptLocator: path.join(transcriptDir, "session.jsonl"),
       modelProvider: "qwencode",
       model: "qwen",
       contextTokens: 123,
@@ -108,7 +108,7 @@ describe("resetReplyRunSession", () => {
       key: "main",
       previousSessionId: "session",
       nextSessionId: activeSessionEntry?.sessionId,
-      nextSessionFile: activeSessionEntry?.sessionFile,
+      nextTranscriptLocator: activeSessionEntry?.transcriptLocator,
     });
     expect(errorMock).toHaveBeenCalledWith("reset 00000000-0000-0000-0000-000000000123");
 
@@ -122,7 +122,7 @@ describe("resetReplyRunSession", () => {
     const sessionEntry: SessionEntry = {
       sessionId: "session",
       updatedAt: 1,
-      sessionFile: path.join(transcriptDir, "session.jsonl"),
+      transcriptLocator: path.join(transcriptDir, "session.jsonl"),
       totalTokens: 42,
       compactionCount: 1,
     };

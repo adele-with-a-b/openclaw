@@ -600,27 +600,27 @@ describe("sessions", () => {
     expect(entry.lastProvider).toBeUndefined();
   });
 
-  it("uses agent id when resolving session file fallback paths", () => {
+  it("uses agent id when resolving transcript locator fallback paths", () => {
     withStateDir("/custom/state", () => {
-      const sessionFile = resolveSessionTranscriptLocator("sess-2", undefined, {
+      const transcriptLocator = resolveSessionTranscriptLocator("sess-2", undefined, {
         agentId: "codex",
       });
-      expect(sessionFile).toBe(
+      expect(transcriptLocator).toBe(
         createSqliteSessionTranscriptLocator({ agentId: "codex", sessionId: "sess-2" }),
       );
     });
   });
 
-  it("does not reuse legacy cross-agent absolute sessionFile paths", () => {
+  it("does not reuse legacy cross-agent absolute transcriptLocator paths", () => {
     withStateDir(path.resolve("/different/state"), () => {
       const originalBase = path.resolve("/original/state");
       const bot2Session = path.join(originalBase, "agents", "bot2", "sessions", "sess-1.jsonl");
-      const sessionFile = resolveSessionTranscriptLocator(
+      const transcriptLocator = resolveSessionTranscriptLocator(
         "sess-1",
-        { sessionFile: bot2Session },
+        { transcriptLocator: bot2Session },
         { agentId: "bot1" },
       );
-      expect(sessionFile).toBe(
+      expect(transcriptLocator).toBe(
         createSqliteSessionTranscriptLocator({ agentId: "bot1", sessionId: "sess-1" }),
       );
     });
@@ -646,12 +646,12 @@ describe("sessions", () => {
         agentId: "bot1",
         sessionId: "sess-1",
       });
-      const sessionFile = resolveSessionTranscriptLocator(
+      const transcriptLocator = resolveSessionTranscriptLocator(
         "sess-1",
-        { sessionFile: locator },
+        { transcriptLocator: locator },
         { agentId: "bot1" },
       );
-      expect(sessionFile).toBe(locator);
+      expect(transcriptLocator).toBe(locator);
     });
   });
 
@@ -661,12 +661,12 @@ describe("sessions", () => {
         agentId: "bot2",
         sessionId: "sess-1",
       });
-      const sessionFile = resolveSessionTranscriptLocator(
+      const transcriptLocator = resolveSessionTranscriptLocator(
         "sess-1",
-        { sessionFile: bot2Locator },
+        { transcriptLocator: bot2Locator },
         { agentId: "bot1" },
       );
-      expect(sessionFile).toBe(
+      expect(transcriptLocator).toBe(
         createSqliteSessionTranscriptLocator({ agentId: "bot1", sessionId: "sess-1" }),
       );
     });

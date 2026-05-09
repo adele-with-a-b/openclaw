@@ -618,7 +618,7 @@ function truncateOversizedToolResultsInExistingSessionManager(params: {
   contextWindowTokens: number;
   maxCharsOverride?: number;
   agentId?: string;
-  sessionFile?: string;
+  transcriptLocator?: string;
   sessionId?: string;
   sessionKey?: string;
 }): { truncated: boolean; truncatedCount: number; reason?: string } {
@@ -654,11 +654,11 @@ function truncateOversizedToolResultsInExistingSessionManager(params: {
     sessionManager,
     replacements: plan.replacements,
   });
-  if (rewriteResult.changed && params.sessionFile) {
+  if (rewriteResult.changed && params.transcriptLocator) {
     emitSessionTranscriptUpdate({
       ...(params.agentId ? { agentId: params.agentId } : {}),
       ...(params.sessionId ? { sessionId: params.sessionId } : {}),
-      sessionFile: params.sessionFile,
+      transcriptLocator: params.transcriptLocator,
       sessionKey: params.sessionKey,
     });
   }
@@ -679,7 +679,7 @@ function truncateOversizedToolResultsInExistingSessionManager(params: {
 
 async function truncateOversizedToolResultsInTranscriptState(params: {
   state: TranscriptState;
-  sessionFile: string;
+  transcriptLocator: string;
   contextWindowTokens: number;
   maxCharsOverride?: number;
   agentId?: string;
@@ -721,14 +721,14 @@ async function truncateOversizedToolResultsInTranscriptState(params: {
   });
   if (rewriteResult.changed) {
     await persistTranscriptStateMutation({
-      sessionFile: params.sessionFile,
+      transcriptLocator: params.transcriptLocator,
       state,
       appendedEntries: rewriteResult.appendedEntries,
     });
     emitSessionTranscriptUpdate({
       ...(params.agentId ? { agentId: params.agentId } : {}),
       ...(params.sessionId ? { sessionId: params.sessionId } : {}),
-      sessionFile: params.sessionFile,
+      transcriptLocator: params.transcriptLocator,
       sessionKey: params.sessionKey,
     });
   }
@@ -752,7 +752,7 @@ export function truncateOversizedToolResultsInSessionManager(params: {
   contextWindowTokens: number;
   maxCharsOverride?: number;
   agentId?: string;
-  sessionFile?: string;
+  transcriptLocator?: string;
   sessionId?: string;
   sessionKey?: string;
 }): { truncated: boolean; truncatedCount: number; reason?: string } {
@@ -766,7 +766,7 @@ export function truncateOversizedToolResultsInSessionManager(params: {
 }
 
 export async function truncateOversizedToolResultsInSession(params: {
-  sessionFile: string;
+  transcriptLocator: string;
   contextWindowTokens: number;
   maxCharsOverride?: number;
   agentId?: string;
@@ -774,16 +774,16 @@ export async function truncateOversizedToolResultsInSession(params: {
   sessionKey?: string;
   config?: unknown;
 }): Promise<{ truncated: boolean; truncatedCount: number; reason?: string }> {
-  const { sessionFile, contextWindowTokens } = params;
+  const { transcriptLocator, contextWindowTokens } = params;
 
   try {
-    const state = await readTranscriptState(sessionFile);
+    const state = await readTranscriptState(transcriptLocator);
     return await truncateOversizedToolResultsInTranscriptState({
       state,
       contextWindowTokens,
       maxCharsOverride: params.maxCharsOverride,
       agentId: params.agentId,
-      sessionFile,
+      transcriptLocator,
       sessionId: params.sessionId,
       sessionKey: params.sessionKey,
     });

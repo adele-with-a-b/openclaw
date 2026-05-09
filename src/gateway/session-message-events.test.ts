@@ -129,7 +129,7 @@ function waitForSessionsChangedMessagePhase(
 async function emitTranscriptUpdateAndCollectEvents(params: {
   ws: Awaited<ReturnType<Awaited<ReturnType<typeof createGatewaySuiteHarness>>["openWs"]>>;
   sessionKey: string;
-  sessionFile: string;
+  transcriptLocator: string;
   message: Record<string, unknown>;
   messageId: string;
 }) {
@@ -137,7 +137,7 @@ async function emitTranscriptUpdateAndCollectEvents(params: {
   const changedEventPromise = waitForSessionsChangedMessagePhase(params.ws, params.sessionKey);
 
   emitSessionTranscriptUpdate({
-    sessionFile: params.sessionFile,
+    transcriptLocator: params.transcriptLocator,
     sessionKey: params.sessionKey,
     message: params.message,
     messageId: params.messageId,
@@ -301,7 +301,7 @@ describe("session.message websocket events", () => {
       }
       expect(emitSpy).toHaveBeenCalledWith(
         expect.objectContaining({
-          sessionFile: appended.sessionFile,
+          transcriptLocator: appended.transcriptLocator,
           sessionKey: "agent:main:main",
           messageId: appended.messageId,
           message: expect.objectContaining({
@@ -344,7 +344,7 @@ describe("session.message websocket events", () => {
       const { messageEvent } = await emitTranscriptUpdateAndCollectEvents({
         ws,
         sessionKey: "agent:main:main",
-        sessionFile: transcriptPath,
+        transcriptLocator: transcriptPath,
         messageId: "blocked-1",
         message: {
           role: "user",
@@ -380,7 +380,7 @@ describe("session.message websocket events", () => {
     await withOperatorSessionSubscriber(async (ws) => {
       const messageEventPromise = waitForSessionMessageEvent(ws, "agent:main:main");
       emitSessionTranscriptUpdate({
-        sessionFile: createSqliteSessionTranscriptLocator({
+        transcriptLocator: createSqliteSessionTranscriptLocator({
           agentId: "main",
           sessionId: "sess-main",
         }),
@@ -461,7 +461,7 @@ describe("session.message websocket events", () => {
       const { messageEvent, changedEvent } = await emitTranscriptUpdateAndCollectEvents({
         ws,
         sessionKey: "agent:main:main",
-        sessionFile: transcriptPath,
+        transcriptLocator: transcriptPath,
         message: transcriptMessage,
         messageId: "msg-usage",
       });
@@ -501,7 +501,7 @@ describe("session.message websocket events", () => {
       entries: {
         child: {
           sessionId: "sess-child",
-          sessionFile: transcriptPath,
+          transcriptLocator: transcriptPath,
           updatedAt: Date.now(),
           spawnedBy: "agent:main:main",
           spawnedWorkspaceDir: "/tmp/subagent-workspace",
@@ -552,7 +552,7 @@ describe("session.message websocket events", () => {
       );
 
       emitSessionTranscriptUpdate({
-        sessionFile: transcriptPath,
+        transcriptLocator: transcriptPath,
         sessionKey: "agent:main:child",
         message: transcriptMessage,
         messageId: "msg-spawn",
@@ -598,7 +598,7 @@ describe("session.message websocket events", () => {
       entries: {
         main: {
           sessionId: "sess-thread",
-          sessionFile: transcriptPath,
+          transcriptLocator: transcriptPath,
           updatedAt: Date.now(),
           lastChannel: "telegram",
           lastTo: "-100123",
@@ -625,7 +625,7 @@ describe("session.message websocket events", () => {
       const { messageEvent, changedEvent } = await emitTranscriptUpdateAndCollectEvents({
         ws,
         sessionKey: "agent:main:main",
-        sessionFile: transcriptPath,
+        transcriptLocator: transcriptPath,
         message: transcriptMessage,
         messageId: "msg-thread",
       });
@@ -742,12 +742,12 @@ describe("session.message websocket events", () => {
       entries: {
         older: {
           sessionId: "sess-old",
-          sessionFile: transcriptLocator,
+          transcriptLocator: transcriptLocator,
           updatedAt: Date.now(),
         },
         newer: {
           sessionId: "sess-new",
-          sessionFile: transcriptLocator,
+          transcriptLocator: transcriptLocator,
           updatedAt: Date.now() + 10,
         },
       },
@@ -773,7 +773,7 @@ describe("session.message websocket events", () => {
       const messageEventPromise = waitForSessionMessageEvent(ws, "agent:main:newer");
 
       emitSessionTranscriptUpdate({
-        sessionFile: transcriptLocator,
+        transcriptLocator: transcriptLocator,
         message: {
           role: "assistant",
           content: [{ type: "text", text: "shared transcript update" }],

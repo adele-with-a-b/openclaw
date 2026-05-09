@@ -95,9 +95,9 @@ export async function exportTrajectoryCommand(
     return;
   }
 
-  let sessionFile: string;
+  let transcriptLocator: string;
   try {
-    sessionFile = createSqliteSessionTranscriptLocator({
+    transcriptLocator = createSqliteSessionTranscriptLocator({
       agentId: targetAgentId,
       sessionId: entry.sessionId,
     });
@@ -118,7 +118,7 @@ export async function exportTrajectoryCommand(
   try {
     summary = await exportTrajectoryForCommand({
       outputPath: resolvedOpts.output,
-      sessionFile,
+      transcriptLocator,
       sessionId: entry.sessionId,
       sessionKey,
       workspaceDir: path.resolve(resolvedOpts.workspace ?? process.cwd()),

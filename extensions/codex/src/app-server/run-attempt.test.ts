@@ -48,13 +48,13 @@ import {
 
 let tempDir: string;
 
-function createParams(sessionFile: string, workspaceDir: string): EmbeddedRunAttemptParams {
-  const sessionKey = `agent:main:${path.basename(path.dirname(sessionFile)) || "session-1"}`;
+function createParams(transcriptLocator: string, workspaceDir: string): EmbeddedRunAttemptParams {
+  const sessionKey = `agent:main:${path.basename(path.dirname(transcriptLocator)) || "session-1"}`;
   return {
     prompt: "hello",
     sessionId: "session-1",
     sessionKey,
-    sessionFile,
+    transcriptLocator,
     workspaceDir,
     runId: "run-1",
     provider: "codex",
@@ -183,13 +183,13 @@ function userMessage(text: string, timestamp: number) {
 }
 
 function seedSessionHistory(
-  sessionFile: string,
+  transcriptLocator: string,
   messages: Array<ReturnType<typeof assistantMessage> | ReturnType<typeof userMessage>>,
 ) {
   replaceSqliteSessionTranscriptEvents({
     agentId: "main",
     sessionId: "session-1",
-    transcriptPath: sessionFile,
+    transcriptPath: transcriptLocator,
     events: [
       { type: "session", version: 1, id: "session-1" },
       ...messages.map((message, index) => ({
@@ -328,11 +328,11 @@ function createResumeHarness() {
 }
 
 async function writeExistingBinding(
-  sessionFile: string,
+  transcriptLocator: string,
   workspaceDir: string,
   overrides: Partial<Parameters<typeof writeCodexAppServerBinding>[1]> = {},
 ) {
-  await writeCodexAppServerBinding(sessionFile, {
+  await writeCodexAppServerBinding(transcriptLocator, {
     threadId: "thread-existing",
     cwd: workspaceDir,
     model: "gpt-5.4-codex",
@@ -621,7 +621,7 @@ describe("runCodexAppServerAttempt", () => {
   });
 
   it("starts Codex threads without duplicate OpenClaw workspace tools by default", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
     const workspaceDir = path.join(tempDir, "workspace");
     const appServer = createThreadLifecycleAppServerOptions();
     const request = vi.fn(async (method: string, _params: unknown) => {
@@ -647,7 +647,7 @@ describe("runCodexAppServerAttempt", () => {
 
     await startOrResumeThread({
       client: { request } as never,
-      params: createParams(sessionFile, workspaceDir),
+      params: createParams(transcriptLocator, workspaceDir),
       cwd: workspaceDir,
       dynamicTools,
       appServer,
@@ -675,9 +675,9 @@ describe("runCodexAppServerAttempt", () => {
   });
 
   it("keys new app-server thread bindings by OpenClaw session key", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
     const workspaceDir = path.join(tempDir, "workspace");
-    const params = createParams(sessionFile, workspaceDir);
+    const params = createParams(transcriptLocator, workspaceDir);
     const appServer = createThreadLifecycleAppServerOptions();
     const request = vi.fn(async (method: string) => {
       if (method === "thread/start") {
@@ -698,10 +698,10 @@ describe("runCodexAppServerAttempt", () => {
       readCodexAppServerBinding({ sessionKey: params.sessionKey }),
     ).resolves.toMatchObject({
       sessionKey: params.sessionKey,
-      sessionFile,
+      transcriptLocator,
       threadId: "thread-keyed",
     });
-    await expect(readCodexAppServerBinding(sessionFile)).resolves.toBeUndefined();
+    await expect(readCodexAppServerBinding(transcriptLocator)).resolves.toBeUndefined();
   });
 
   it("normalizes Codex dynamic toolsAllow entries before filtering", () => {
@@ -1276,12 +1276,12 @@ describe("runCodexAppServerAttempt", () => {
     initializeGlobalHookRunner(
       createMockPluginRegistry([{ hookName: "before_prompt_build", handler: beforePromptBuild }]),
     );
-    const sessionFile = path.join(tempDir, "session.jsonl");
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
     const workspaceDir = path.join(tempDir, "workspace");
-    seedSessionHistory(sessionFile, [assistantMessage("previous turn", Date.now())]);
+    seedSessionHistory(transcriptLocator, [assistantMessage("previous turn", Date.now())]);
     const harness = createStartedThreadHarness();
 
-    const run = runCodexAppServerAttempt(createParams(sessionFile, workspaceDir));
+    const run = runCodexAppServerAttempt(createParams(transcriptLocator, workspaceDir));
     await harness.waitForMethod("turn/start");
     await new Promise<void>((resolve) => setImmediate(resolve));
     await harness.completeTurn({ threadId: "thread-1", turnId: "turn-1" });
@@ -1316,14 +1316,14 @@ describe("runCodexAppServerAttempt", () => {
   });
 
   it("projects mirrored history when starting Codex without a native thread binding", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
     const workspaceDir = path.join(tempDir, "workspace");
-    seedSessionHistory(sessionFile, [
+    seedSessionHistory(transcriptLocator, [
       userMessage("we are fixing the Opik default project", Date.now()),
       assistantMessage("Opik default project context", Date.now() + 1),
     ]);
     const harness = createStartedThreadHarness();
-    const params = createParams(sessionFile, workspaceDir);
+    const params = createParams(transcriptLocator, workspaceDir);
     params.prompt = "make the default webpage openclaw";
 
     const run = runCodexAppServerAttempt(params);
@@ -1345,14 +1345,14 @@ describe("runCodexAppServerAttempt", () => {
   });
 
   it("passes OpenClaw bootstrap files through Codex developer instructions", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
     const workspaceDir = path.join(tempDir, "workspace");
     await fs.mkdir(workspaceDir, { recursive: true });
     await fs.writeFile(path.join(workspaceDir, "AGENTS.md"), "Follow AGENTS guidance.");
     await fs.writeFile(path.join(workspaceDir, "SOUL.md"), "Soul voice goes here.");
     const harness = createStartedThreadHarness();
 
-    const run = runCodexAppServerAttempt(createParams(sessionFile, workspaceDir));
+    const run = runCodexAppServerAttempt(createParams(transcriptLocator, workspaceDir));
     await harness.waitForMethod("turn/start");
     await new Promise<void>((resolve) => setImmediate(resolve));
     await harness.completeTurn({ threadId: "thread-1", turnId: "turn-1" });
@@ -1387,12 +1387,12 @@ describe("runCodexAppServerAttempt", () => {
         { hookName: "agent_end", handler: agentEnd },
       ]),
     );
-    const sessionFile = path.join(tempDir, "session.jsonl");
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
     const workspaceDir = path.join(tempDir, "workspace");
-    seedSessionHistory(sessionFile, [assistantMessage("existing context", Date.now())]);
+    seedSessionHistory(transcriptLocator, [assistantMessage("existing context", Date.now())]);
     const harness = createStartedThreadHarness();
 
-    const params = createParams(sessionFile, workspaceDir);
+    const params = createParams(transcriptLocator, workspaceDir);
     params.runtimePlan = createCodexRuntimePlanFixture();
     params.onAgentEvent = onRunAgentEvent;
     const run = runCodexAppServerAttempt(params);
@@ -1523,10 +1523,10 @@ describe("runCodexAppServerAttempt", () => {
 
   it("forwards Codex app-server verbose tool summaries and completed output", async () => {
     const onToolResult = vi.fn();
-    const sessionFile = path.join(tempDir, "session.jsonl");
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
     const workspaceDir = path.join(tempDir, "workspace");
     const harness = createStartedThreadHarness();
-    const params = createParams(sessionFile, workspaceDir);
+    const params = createParams(transcriptLocator, workspaceDir);
     params.verboseLevel = "full";
     params.onToolResult = onToolResult;
 
@@ -1581,11 +1581,11 @@ describe("runCodexAppServerAttempt", () => {
   });
 
   it("registers native hook relay config for an enabled Codex turn and cleans it up", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
     const workspaceDir = path.join(tempDir, "workspace");
     const harness = createStartedThreadHarness();
 
-    const run = runCodexAppServerAttempt(createParams(sessionFile, workspaceDir), {
+    const run = runCodexAppServerAttempt(createParams(transcriptLocator, workspaceDir), {
       nativeHookRelay: {
         enabled: true,
         events: ["pre_tool_use"],
@@ -1621,11 +1621,11 @@ describe("runCodexAppServerAttempt", () => {
   });
 
   it("lets Codex app-server approval modes own native permission requests by default", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
     const workspaceDir = path.join(tempDir, "workspace");
     const harness = createStartedThreadHarness();
 
-    const run = runCodexAppServerAttempt(createParams(sessionFile, workspaceDir), {
+    const run = runCodexAppServerAttempt(createParams(transcriptLocator, workspaceDir), {
       pluginConfig: {
         appServer: {
           mode: "guardian",
@@ -1663,11 +1663,11 @@ describe("runCodexAppServerAttempt", () => {
   });
 
   it("preserves explicit native permission request relay events in app-server approval modes", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
     const workspaceDir = path.join(tempDir, "workspace");
     const harness = createStartedThreadHarness();
 
-    const run = runCodexAppServerAttempt(createParams(sessionFile, workspaceDir), {
+    const run = runCodexAppServerAttempt(createParams(transcriptLocator, workspaceDir), {
       pluginConfig: {
         appServer: {
           mode: "guardian",
@@ -1700,11 +1700,11 @@ describe("runCodexAppServerAttempt", () => {
   });
 
   it("reuses the Codex native hook relay id across runs for the same session", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
     const workspaceDir = path.join(tempDir, "workspace");
     const firstHarness = createStartedThreadHarness();
 
-    const firstRun = runCodexAppServerAttempt(createParams(sessionFile, workspaceDir), {
+    const firstRun = runCodexAppServerAttempt(createParams(transcriptLocator, workspaceDir), {
       nativeHookRelay: {
         enabled: true,
         events: ["pre_tool_use"],
@@ -1723,7 +1723,7 @@ describe("runCodexAppServerAttempt", () => {
     ).toBeUndefined();
 
     const secondHarness = createResumeHarness();
-    const secondParams = createParams(sessionFile, workspaceDir);
+    const secondParams = createParams(transcriptLocator, workspaceDir);
     secondParams.runId = "run-2";
     const secondRun = runCodexAppServerAttempt(secondParams, {
       nativeHookRelay: {
@@ -1765,11 +1765,11 @@ describe("runCodexAppServerAttempt", () => {
   });
 
   it("sends clearing Codex native hook config when the relay is disabled", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
     const workspaceDir = path.join(tempDir, "workspace");
     const harness = createStartedThreadHarness();
 
-    const run = runCodexAppServerAttempt(createParams(sessionFile, workspaceDir), {
+    const run = runCodexAppServerAttempt(createParams(transcriptLocator, workspaceDir), {
       nativeHookRelay: { enabled: false },
     });
     await harness.waitForMethod("turn/start");
@@ -1791,7 +1791,7 @@ describe("runCodexAppServerAttempt", () => {
   });
 
   it("cleans up native hook relay state when turn/start fails", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
     const workspaceDir = path.join(tempDir, "workspace");
     const harness = createStartedThreadHarness(async (method) => {
       if (method === "turn/start") {
@@ -1801,7 +1801,7 @@ describe("runCodexAppServerAttempt", () => {
     });
 
     await expect(
-      runCodexAppServerAttempt(createParams(sessionFile, workspaceDir), {
+      runCodexAppServerAttempt(createParams(transcriptLocator, workspaceDir), {
         nativeHookRelay: { enabled: true },
       }),
     ).rejects.toThrow("turn start exploded");
@@ -1812,7 +1812,7 @@ describe("runCodexAppServerAttempt", () => {
   });
 
   it("preserves Codex usage-limit reset details when turn/start fails", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
     const workspaceDir = path.join(tempDir, "workspace");
     const resetsAt = Math.ceil(Date.now() / 1000) + 120;
     const harnessRef: { current?: ReturnType<typeof createStartedThreadHarness> } = {};
@@ -1830,7 +1830,7 @@ describe("runCodexAppServerAttempt", () => {
     });
     harnessRef.current = harness;
 
-    const runError = runCodexAppServerAttempt(createParams(sessionFile, workspaceDir)).catch(
+    const runError = runCodexAppServerAttempt(createParams(transcriptLocator, workspaceDir)).catch(
       (error: unknown) => error,
     );
 
@@ -1843,7 +1843,7 @@ describe("runCodexAppServerAttempt", () => {
   });
 
   it("uses a recent Codex rate-limit snapshot when turn/start omits reset details", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
     const workspaceDir = path.join(tempDir, "workspace");
     const resetsAt = Math.ceil(Date.now() / 1000) + 120;
     rememberCodexRateLimits({
@@ -1867,7 +1867,7 @@ describe("runCodexAppServerAttempt", () => {
       return undefined;
     });
 
-    const runError = runCodexAppServerAttempt(createParams(sessionFile, workspaceDir)).catch(
+    const runError = runCodexAppServerAttempt(createParams(transcriptLocator, workspaceDir)).catch(
       (error: unknown) => error,
     );
     await harness.waitForMethod("turn/start");
@@ -1881,11 +1881,11 @@ describe("runCodexAppServerAttempt", () => {
   });
 
   it("cleans up native hook relay state when the Codex turn aborts", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
     const workspaceDir = path.join(tempDir, "workspace");
     const harness = createStartedThreadHarness();
 
-    const run = runCodexAppServerAttempt(createParams(sessionFile, workspaceDir), {
+    const run = runCodexAppServerAttempt(createParams(transcriptLocator, workspaceDir), {
       nativeHookRelay: { enabled: true },
     });
     await harness.waitForMethod("turn/start");
@@ -1905,11 +1905,11 @@ describe("runCodexAppServerAttempt", () => {
     initializeGlobalHookRunner(
       createMockPluginRegistry([{ hookName: "agent_end", handler: agentEnd }]),
     );
-    const sessionFile = path.join(tempDir, "session.jsonl");
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
     const workspaceDir = path.join(tempDir, "workspace");
     const harness = createStartedThreadHarness();
 
-    const params = createParams(sessionFile, workspaceDir);
+    const params = createParams(transcriptLocator, workspaceDir);
     params.onAgentEvent = onRunAgentEvent;
     const run = runCodexAppServerAttempt(params);
     await harness.waitForMethod("turn/start");
@@ -1972,9 +1972,9 @@ describe("runCodexAppServerAttempt", () => {
         { hookName: "agent_end", handler: agentEnd },
       ]),
     );
-    const sessionFile = path.join(tempDir, "session.jsonl");
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
     const workspaceDir = path.join(tempDir, "workspace");
-    seedSessionHistory(sessionFile, [assistantMessage("existing context", Date.now())]);
+    seedSessionHistory(transcriptLocator, [assistantMessage("existing context", Date.now())]);
     createStartedThreadHarness(async (method) => {
       if (method === "turn/start") {
         throw new Error("turn start exploded");
@@ -1982,7 +1982,7 @@ describe("runCodexAppServerAttempt", () => {
       return undefined;
     });
 
-    const params = createParams(sessionFile, workspaceDir);
+    const params = createParams(transcriptLocator, workspaceDir);
     params.runtimePlan = createCodexRuntimePlanFixture();
 
     await expect(runCodexAppServerAttempt(params)).rejects.toThrow("turn start exploded");
@@ -2577,7 +2577,7 @@ describe("runCodexAppServerAttempt", () => {
   });
 
   it("passes session plugin app policy context to elicitation handling", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
     const workspaceDir = path.join(tempDir, "workspace");
     const agentDir = path.join(tempDir, "agent");
     const pluginConfig = {
@@ -2719,7 +2719,7 @@ describe("runCodexAppServerAttempt", () => {
         }) as never,
     );
 
-    const params = createParams(sessionFile, workspaceDir);
+    const params = createParams(transcriptLocator, workspaceDir);
     params.agentDir = agentDir;
     const run = runCodexAppServerAttempt(params, { pluginConfig });
     await vi.waitFor(() => expect(handleRequest).toBeTypeOf("function"));
@@ -2788,7 +2788,7 @@ describe("runCodexAppServerAttempt", () => {
   });
 
   it("keys plugin app inventory by the resolved Codex account", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
     const workspaceDir = path.join(tempDir, "workspace");
     const agentDir = path.join(tempDir, "agent");
     const authProfileId = "openai-codex:work";
@@ -2898,7 +2898,7 @@ describe("runCodexAppServerAttempt", () => {
       }
       return undefined;
     });
-    const params = createParams(sessionFile, workspaceDir);
+    const params = createParams(transcriptLocator, workspaceDir);
     params.agentDir = agentDir;
     params.authProfileId = authProfileId;
     params.authProfileStore = {
@@ -2939,7 +2939,7 @@ describe("runCodexAppServerAttempt", () => {
   });
 
   it("keys plugin app inventory by inherited API key fallback credentials", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
     const workspaceDir = path.join(tempDir, "workspace");
     const agentDir = path.join(tempDir, "agent");
     const pluginConfig = {
@@ -3071,7 +3071,7 @@ describe("runCodexAppServerAttempt", () => {
       }
       return undefined;
     });
-    const params = createParams(sessionFile, workspaceDir);
+    const params = createParams(transcriptLocator, workspaceDir);
     params.agentDir = agentDir;
 
     const run = runCodexAppServerAttempt(params, { pluginConfig });
@@ -3173,12 +3173,12 @@ describe("runCodexAppServerAttempt", () => {
   });
 
   it("keeps extended history enabled when resuming a bound Codex thread", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
     const workspaceDir = path.join(tempDir, "workspace");
-    await writeExistingBinding(sessionFile, workspaceDir, { dynamicToolsFingerprint: "[]" });
+    await writeExistingBinding(transcriptLocator, workspaceDir, { dynamicToolsFingerprint: "[]" });
     const { requests, waitForMethod, completeTurn } = createResumeHarness();
 
-    const run = runCodexAppServerAttempt(createParams(sessionFile, workspaceDir), {
+    const run = runCodexAppServerAttempt(createParams(transcriptLocator, workspaceDir), {
       pluginConfig: { appServer: { mode: "yolo" } },
     });
     await waitForMethod("turn/start");
@@ -3197,11 +3197,11 @@ describe("runCodexAppServerAttempt", () => {
   });
 
   it("resumes app-server thread bindings stored under the OpenClaw session key", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
     const workspaceDir = path.join(tempDir, "workspace");
-    const params = createParams(sessionFile, workspaceDir);
+    const params = createParams(transcriptLocator, workspaceDir);
     await writeCodexAppServerBinding(
-      { sessionKey: params.sessionKey, sessionFile },
+      { sessionKey: params.sessionKey, transcriptLocator },
       {
         threadId: "thread-existing",
         cwd: workspaceDir,
@@ -3224,9 +3224,9 @@ describe("runCodexAppServerAttempt", () => {
   });
 
   it("resumes a bound Codex thread when only dynamic tool descriptions change", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
     const workspaceDir = path.join(tempDir, "workspace");
-    const params = createParams(sessionFile, workspaceDir);
+    const params = createParams(transcriptLocator, workspaceDir);
     const appServer = createThreadLifecycleAppServerOptions();
     const request = vi.fn(async (method: string) => {
       if (method === "thread/start") {
@@ -3262,9 +3262,9 @@ describe("runCodexAppServerAttempt", () => {
   });
 
   it("resumes a bound Codex thread when dynamic tools are reordered", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
     const workspaceDir = path.join(tempDir, "workspace");
-    const params = createParams(sessionFile, workspaceDir);
+    const params = createParams(transcriptLocator, workspaceDir);
     const appServer = createThreadLifecycleAppServerOptions();
     const request = vi.fn(async (method: string) => {
       if (method === "thread/start") {
@@ -3296,9 +3296,9 @@ describe("runCodexAppServerAttempt", () => {
   });
 
   it("keeps the previous dynamic tool fingerprint for transient no-tool maintenance turns", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
     const workspaceDir = path.join(tempDir, "workspace");
-    const params = createParams(sessionFile, workspaceDir);
+    const params = createParams(transcriptLocator, workspaceDir);
     const appServer = createThreadLifecycleAppServerOptions();
     let nextThread = 1;
     const request = vi.fn(async (method: string) => {
@@ -3349,9 +3349,9 @@ describe("runCodexAppServerAttempt", () => {
   });
 
   it("preserves the binding when the app-server closes during thread resume", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
     const workspaceDir = path.join(tempDir, "workspace");
-    await writeExistingBinding(sessionFile, workspaceDir, { dynamicToolsFingerprint: "[]" });
+    await writeExistingBinding(transcriptLocator, workspaceDir, { dynamicToolsFingerprint: "[]" });
     const appServer = createThreadLifecycleAppServerOptions();
     const request = vi.fn(async (method: string) => {
       if (method === "thread/resume") {
@@ -3363,7 +3363,7 @@ describe("runCodexAppServerAttempt", () => {
     await expect(
       startOrResumeThread({
         client: { request } as never,
-        params: createParams(sessionFile, workspaceDir),
+        params: createParams(transcriptLocator, workspaceDir),
         cwd: workspaceDir,
         dynamicTools: [],
         appServer,
@@ -3373,8 +3373,8 @@ describe("runCodexAppServerAttempt", () => {
     expect(request.mock.calls.map(([method]) => method)).toEqual(["thread/resume"]);
     await expect(
       readCodexAppServerBinding({
-        sessionKey: createParams(sessionFile, workspaceDir).sessionKey,
-        sessionFile,
+        sessionKey: createParams(transcriptLocator, workspaceDir).sessionKey,
+        transcriptLocator,
       }),
     ).resolves.toMatchObject({
       threadId: "thread-existing",
@@ -3382,9 +3382,9 @@ describe("runCodexAppServerAttempt", () => {
   });
 
   it("restarts the app-server once when a shared client closes during startup", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
     const workspaceDir = path.join(tempDir, "workspace");
-    await writeExistingBinding(sessionFile, workspaceDir, { dynamicToolsFingerprint: "[]" });
+    await writeExistingBinding(transcriptLocator, workspaceDir, { dynamicToolsFingerprint: "[]" });
     const requests: string[][] = [];
     let starts = 0;
     let notify: (notification: CodexServerNotification) => Promise<void> = async () => undefined;
@@ -3414,7 +3414,7 @@ describe("runCodexAppServerAttempt", () => {
       } as never;
     });
 
-    const run = runCodexAppServerAttempt(createParams(sessionFile, workspaceDir));
+    const run = runCodexAppServerAttempt(createParams(transcriptLocator, workspaceDir));
     await vi.waitFor(() => expect(requests[1]).toContain("turn/start"), { interval: 1 });
     await notify({
       method: "turn/completed",
@@ -3430,9 +3430,9 @@ describe("runCodexAppServerAttempt", () => {
   });
 
   it("tolerates a second app-server close while retrying startup", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
     const workspaceDir = path.join(tempDir, "workspace");
-    await writeExistingBinding(sessionFile, workspaceDir, { dynamicToolsFingerprint: "[]" });
+    await writeExistingBinding(transcriptLocator, workspaceDir, { dynamicToolsFingerprint: "[]" });
     const requests: string[][] = [];
     let starts = 0;
     let notify: (notification: CodexServerNotification) => Promise<void> = async () => undefined;
@@ -3462,7 +3462,7 @@ describe("runCodexAppServerAttempt", () => {
       } as never;
     });
 
-    const run = runCodexAppServerAttempt(createParams(sessionFile, workspaceDir));
+    const run = runCodexAppServerAttempt(createParams(transcriptLocator, workspaceDir));
     await vi.waitFor(() => expect(requests[2]).toContain("turn/start"), { interval: 1 });
     await notify({
       method: "turn/completed",
@@ -3482,9 +3482,9 @@ describe("runCodexAppServerAttempt", () => {
   });
 
   it("passes native hook relay config on thread start and resume", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
     const workspaceDir = path.join(tempDir, "workspace");
-    const params = createParams(sessionFile, workspaceDir);
+    const params = createParams(transcriptLocator, workspaceDir);
     const appServer = createThreadLifecycleAppServerOptions();
     const request = vi.fn(async (method: string) => {
       if (method === "thread/start") {
@@ -3534,9 +3534,9 @@ describe("runCodexAppServerAttempt", () => {
   });
 
   it("merges native hook relay config with plugin app config when starting a thread", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
     const workspaceDir = path.join(tempDir, "workspace");
-    const params = createParams(sessionFile, workspaceDir);
+    const params = createParams(transcriptLocator, workspaceDir);
     const appServer = createThreadLifecycleAppServerOptions();
     const request = vi.fn(async (method: string) => {
       if (method === "thread/start") {
@@ -3582,7 +3582,9 @@ describe("runCodexAppServerAttempt", () => {
         }),
       ],
     ]);
-    await expect(readCodexAppServerBinding(sessionFile)).resolves.toMatchObject({
+    await expect(
+      readCodexAppServerBinding({ sessionKey: params.sessionKey }),
+    ).resolves.toMatchObject({
       threadId: "thread-plugins",
       pluginAppsFingerprint: "plugin-apps-config-1",
       pluginAppsInputFingerprint: "plugin-apps-input-1",
@@ -3591,9 +3593,9 @@ describe("runCodexAppServerAttempt", () => {
   });
 
   it("revalidates compatible plugin app bindings without resending app config", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
     const workspaceDir = path.join(tempDir, "workspace");
-    const params = createParams(sessionFile, workspaceDir);
+    const params = createParams(transcriptLocator, workspaceDir);
     const appServer = createThreadLifecycleAppServerOptions();
     const request = vi.fn(async (method: string) => {
       if (method === "thread/start" || method === "thread/resume") {
@@ -3661,15 +3663,15 @@ describe("runCodexAppServerAttempt", () => {
   });
 
   it("starts a new plugin app thread when full binding revalidation removes an app", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
     const workspaceDir = path.join(tempDir, "workspace");
-    await writeExistingBinding(sessionFile, workspaceDir, {
+    await writeExistingBinding(transcriptLocator, workspaceDir, {
       dynamicToolsFingerprint: "[]",
       pluginAppsFingerprint: "plugin-apps-config-1",
       pluginAppsInputFingerprint: "plugin-apps-input-1",
       pluginAppPolicyContext: createPluginAppPolicyContext(),
     });
-    const params = createParams(sessionFile, workspaceDir);
+    const params = createParams(transcriptLocator, workspaceDir);
     const appServer = createThreadLifecycleAppServerOptions();
     const request = vi.fn(async (method: string) => {
       if (method === "thread/start") {
@@ -3726,7 +3728,9 @@ describe("runCodexAppServerAttempt", () => {
         }),
       ],
     ]);
-    await expect(readCodexAppServerBinding(sessionFile)).resolves.toMatchObject({
+    await expect(
+      readCodexAppServerBinding({ sessionKey: params.sessionKey }),
+    ).resolves.toMatchObject({
       threadId: "thread-revalidated",
       pluginAppsFingerprint: "plugin-apps-empty",
       pluginAppPolicyContext: emptyPolicyContext,
@@ -3734,16 +3738,16 @@ describe("runCodexAppServerAttempt", () => {
   });
 
   it("keeps the existing plugin app binding when revalidation fails", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
     const workspaceDir = path.join(tempDir, "workspace");
     const pluginAppPolicyContext = createPluginAppPolicyContext();
-    await writeExistingBinding(sessionFile, workspaceDir, {
+    await writeExistingBinding(transcriptLocator, workspaceDir, {
       dynamicToolsFingerprint: "[]",
       pluginAppsFingerprint: "plugin-apps-config-1",
       pluginAppsInputFingerprint: "plugin-apps-input-1",
       pluginAppPolicyContext,
     });
-    const params = createParams(sessionFile, workspaceDir);
+    const params = createParams(transcriptLocator, workspaceDir);
     const appServer = createThreadLifecycleAppServerOptions();
     const request = vi.fn(async (method: string) => {
       if (method === "thread/resume") {
@@ -3771,7 +3775,9 @@ describe("runCodexAppServerAttempt", () => {
     expect(request.mock.calls).toEqual([
       ["thread/resume", expect.not.objectContaining({ config: expect.anything() })],
     ]);
-    await expect(readCodexAppServerBinding(sessionFile)).resolves.toMatchObject({
+    await expect(
+      readCodexAppServerBinding({ sessionKey: params.sessionKey }),
+    ).resolves.toMatchObject({
       threadId: "thread-existing",
       pluginAppsFingerprint: "plugin-apps-config-1",
       pluginAppsInputFingerprint: "plugin-apps-input-1",
@@ -3780,15 +3786,15 @@ describe("runCodexAppServerAttempt", () => {
   });
 
   it("rebuilds an empty plugin app binding after app inventory recovers", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
     const workspaceDir = path.join(tempDir, "workspace");
-    await writeExistingBinding(sessionFile, workspaceDir, {
+    await writeExistingBinding(transcriptLocator, workspaceDir, {
       dynamicToolsFingerprint: "[]",
       pluginAppsFingerprint: "plugin-apps-empty",
       pluginAppsInputFingerprint: "plugin-apps-input-1",
       pluginAppPolicyContext: { fingerprint: "plugin-policy-empty", apps: {}, pluginAppIds: {} },
     });
-    const params = createParams(sessionFile, workspaceDir);
+    const params = createParams(transcriptLocator, workspaceDir);
     const appServer = createThreadLifecycleAppServerOptions();
     const request = vi.fn(async (method: string) => {
       if (method === "thread/start") {
@@ -3828,7 +3834,9 @@ describe("runCodexAppServerAttempt", () => {
         }),
       ],
     ]);
-    await expect(readCodexAppServerBinding(sessionFile)).resolves.toMatchObject({
+    await expect(
+      readCodexAppServerBinding({ sessionKey: params.sessionKey }),
+    ).resolves.toMatchObject({
       threadId: "thread-recovered",
       pluginAppsFingerprint: "plugin-apps-config-1",
       pluginAppPolicyContext,
@@ -3836,16 +3844,16 @@ describe("runCodexAppServerAttempt", () => {
   });
 
   it("keeps an empty plugin app binding when recovery still produces the same config", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
     const workspaceDir = path.join(tempDir, "workspace");
     const emptyPolicyContext = { fingerprint: "plugin-policy-empty", apps: {}, pluginAppIds: {} };
-    await writeExistingBinding(sessionFile, workspaceDir, {
+    await writeExistingBinding(transcriptLocator, workspaceDir, {
       dynamicToolsFingerprint: "[]",
       pluginAppsFingerprint: "plugin-apps-empty",
       pluginAppsInputFingerprint: "plugin-apps-input-1",
       pluginAppPolicyContext: emptyPolicyContext,
     });
-    const params = createParams(sessionFile, workspaceDir);
+    const params = createParams(transcriptLocator, workspaceDir);
     const appServer = createThreadLifecycleAppServerOptions();
     const request = vi.fn(async (method: string) => {
       if (method === "thread/resume") {
@@ -3890,15 +3898,15 @@ describe("runCodexAppServerAttempt", () => {
   });
 
   it("rebuilds a partial plugin app binding after another plugin recovers", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
     const workspaceDir = path.join(tempDir, "workspace");
-    await writeExistingBinding(sessionFile, workspaceDir, {
+    await writeExistingBinding(transcriptLocator, workspaceDir, {
       dynamicToolsFingerprint: "[]",
       pluginAppsFingerprint: "plugin-apps-partial",
       pluginAppsInputFingerprint: "plugin-apps-input-1",
       pluginAppPolicyContext: createPluginAppPolicyContext(),
     });
-    const params = createParams(sessionFile, workspaceDir);
+    const params = createParams(transcriptLocator, workspaceDir);
     const appServer = createThreadLifecycleAppServerOptions();
     const request = vi.fn(async (method: string) => {
       if (method === "thread/start") {
@@ -3939,7 +3947,9 @@ describe("runCodexAppServerAttempt", () => {
         }),
       ],
     ]);
-    await expect(readCodexAppServerBinding(sessionFile)).resolves.toMatchObject({
+    await expect(
+      readCodexAppServerBinding({ sessionKey: params.sessionKey }),
+    ).resolves.toMatchObject({
       threadId: "thread-recovered",
       pluginAppsFingerprint: "plugin-apps-config-2",
       pluginAppPolicyContext: recoveredPolicyContext,
@@ -3947,9 +3957,9 @@ describe("runCodexAppServerAttempt", () => {
   });
 
   it("rebuilds a partial plugin app binding after another app from the same plugin recovers", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
     const workspaceDir = path.join(tempDir, "workspace");
-    await writeExistingBinding(sessionFile, workspaceDir, {
+    await writeExistingBinding(transcriptLocator, workspaceDir, {
       dynamicToolsFingerprint: "[]",
       pluginAppsFingerprint: "plugin-apps-partial",
       pluginAppsInputFingerprint: "plugin-apps-input-1",
@@ -3960,7 +3970,7 @@ describe("runCodexAppServerAttempt", () => {
         },
       },
     });
-    const params = createParams(sessionFile, workspaceDir);
+    const params = createParams(transcriptLocator, workspaceDir);
     const appServer = createThreadLifecycleAppServerOptions();
     const request = vi.fn(async (method: string) => {
       if (method === "thread/start") {
@@ -4001,7 +4011,9 @@ describe("runCodexAppServerAttempt", () => {
         }),
       ],
     ]);
-    await expect(readCodexAppServerBinding(sessionFile)).resolves.toMatchObject({
+    await expect(
+      readCodexAppServerBinding({ sessionKey: params.sessionKey }),
+    ).resolves.toMatchObject({
       threadId: "thread-recovered",
       pluginAppsFingerprint: "plugin-apps-config-calendar-2",
       pluginAppPolicyContext: recoveredPolicyContext,
@@ -4009,10 +4021,10 @@ describe("runCodexAppServerAttempt", () => {
   });
 
   it("starts a new configured thread for legacy bindings missing plugin app metadata", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
     const workspaceDir = path.join(tempDir, "workspace");
-    await writeExistingBinding(sessionFile, workspaceDir, { dynamicToolsFingerprint: "[]" });
-    const params = createParams(sessionFile, workspaceDir);
+    await writeExistingBinding(transcriptLocator, workspaceDir, { dynamicToolsFingerprint: "[]" });
+    const params = createParams(transcriptLocator, workspaceDir);
     const appServer = createThreadLifecycleAppServerOptions();
     const request = vi.fn(async (method: string) => {
       if (method === "thread/start") {
@@ -4050,7 +4062,9 @@ describe("runCodexAppServerAttempt", () => {
         }),
       ],
     ]);
-    await expect(readCodexAppServerBinding(sessionFile)).resolves.toMatchObject({
+    await expect(
+      readCodexAppServerBinding({ sessionKey: params.sessionKey }),
+    ).resolves.toMatchObject({
       threadId: "thread-plugins",
       pluginAppsFingerprint: "plugin-apps-config-1",
       pluginAppPolicyContext,
@@ -4058,9 +4072,9 @@ describe("runCodexAppServerAttempt", () => {
   });
 
   it("starts a new Codex thread when dynamic tool schemas change", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
     const workspaceDir = path.join(tempDir, "workspace");
-    const params = createParams(sessionFile, workspaceDir);
+    const params = createParams(transcriptLocator, workspaceDir);
     const appServer = createThreadLifecycleAppServerOptions();
     let nextThread = 1;
     const request = vi.fn(async (method: string) => {
@@ -4090,12 +4104,12 @@ describe("runCodexAppServerAttempt", () => {
   });
 
   it("passes configured app-server policy, sandbox, service tier, and model on resume", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
     const workspaceDir = path.join(tempDir, "workspace");
-    await writeExistingBinding(sessionFile, workspaceDir, { model: "gpt-5.2" });
+    await writeExistingBinding(transcriptLocator, workspaceDir, { model: "gpt-5.2" });
     const { requests, waitForMethod, completeTurn } = createResumeHarness();
 
-    const run = runCodexAppServerAttempt(createParams(sessionFile, workspaceDir), {
+    const run = runCodexAppServerAttempt(createParams(transcriptLocator, workspaceDir), {
       pluginConfig: {
         appServer: {
           approvalPolicy: "on-request",
@@ -4136,12 +4150,12 @@ describe("runCodexAppServerAttempt", () => {
   });
 
   it("passes current Codex service tier request values through app-server resume and turn requests", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
     const workspaceDir = path.join(tempDir, "workspace");
-    await writeExistingBinding(sessionFile, workspaceDir, { model: "gpt-5.2" });
+    await writeExistingBinding(transcriptLocator, workspaceDir, { model: "gpt-5.2" });
     const { requests, waitForMethod, completeTurn } = createResumeHarness();
 
-    const run = runCodexAppServerAttempt(createParams(sessionFile, workspaceDir), {
+    const run = runCodexAppServerAttempt(createParams(transcriptLocator, workspaceDir), {
       pluginConfig: {
         appServer: {
           approvalPolicy: "on-request",
@@ -4275,12 +4289,12 @@ describe("runCodexAppServerAttempt", () => {
   });
 
   it("preserves the bound auth profile when resume params omit authProfileId", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
     const workspaceDir = path.join(tempDir, "workspace");
-    await writeExistingBinding(sessionFile, workspaceDir, {
+    await writeExistingBinding(transcriptLocator, workspaceDir, {
       authProfileId: "openai-codex:bound",
     });
-    const params = createParams(sessionFile, workspaceDir);
+    const params = createParams(transcriptLocator, workspaceDir);
     delete params.authProfileId;
     params.agentDir = path.join(tempDir, "agent");
 
@@ -4315,9 +4329,9 @@ describe("runCodexAppServerAttempt", () => {
   });
 
   it("reuses the bound auth profile for app-server startup when params omit it", async () => {
-    const sessionFile = path.join(tempDir, "session.jsonl");
+    const transcriptLocator = path.join(tempDir, "session.jsonl");
     const workspaceDir = path.join(tempDir, "workspace");
-    await writeExistingBinding(sessionFile, workspaceDir, {
+    await writeExistingBinding(transcriptLocator, workspaceDir, {
       authProfileId: "openai-codex:bound",
       dynamicToolsFingerprint: "[]",
     });
@@ -4340,7 +4354,7 @@ describe("runCodexAppServerAttempt", () => {
         },
       },
     );
-    const params = createParams(sessionFile, workspaceDir);
+    const params = createParams(transcriptLocator, workspaceDir);
     delete params.authProfileId;
     params.agentDir = path.join(tempDir, "agent");
 

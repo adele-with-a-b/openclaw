@@ -97,7 +97,7 @@ Relevant Codex code:
 For Codex harness turns, OpenClaw should preserve this lifecycle:
 
 1. Read the mirrored OpenClaw session transcript.
-2. Bootstrap the active context engine when a previous session file exists.
+2. Bootstrap the active context engine when a previous transcript locator exists.
 3. Run bootstrap maintenance when available.
 4. Assemble context using the active context engine.
 5. Convert the assembled context into Codex-compatible inputs.
@@ -263,8 +263,8 @@ supplementing thread history, swap this projection layer to use that API.
 In `extensions/codex/src/app-server/run-attempt.ts`:
 
 - Read mirrored session history as today.
-- Determine whether the session file existed before this run. Prefer a helper
-  that checks `fs.stat(params.sessionFile)` before mirroring writes.
+- Determine whether the transcript locator existed before this run. Prefer a helper
+  that checks `fs.stat(params.transcriptLocator)` before mirroring writes.
 - Open a `SessionManager` or use a narrow session manager adapter if the helper
   requires it.
 - Call the neutral bootstrap helper when `params.contextEngine` exists.
@@ -272,16 +272,16 @@ In `extensions/codex/src/app-server/run-attempt.ts`:
 Pseudo-flow:
 
 ```ts
-const hadSessionFile = await fileExists(params.sessionFile);
-const sessionManager = SessionManager.open(params.sessionFile);
+const hadTranscriptLocator = await fileExists(params.transcriptLocator);
+const sessionManager = SessionManager.open(params.transcriptLocator);
 const historyMessages = sessionManager.buildSessionContext().messages;
 
 await bootstrapHarnessContextEngine({
-  hadSessionFile,
+  hadTranscriptLocator,
   contextEngine: params.contextEngine,
   sessionId: params.sessionId,
   sessionKey: sandboxSessionKey,
-  sessionFile: params.sessionFile,
+  transcriptLocator: params.transcriptLocator,
   sessionManager,
   runtimeContext: buildHarnessContextEngineRuntimeContext(...),
   runMaintenance: runHarnessContextEngineMaintenance,
@@ -366,7 +366,7 @@ best available message snapshot:
 
 - Prefer full mirrored session context after the write, because `afterTurn`
   expects the session snapshot, not only the current turn.
-- Fall back to `historyMessages + result.messagesSnapshot` if the session file
+- Fall back to `historyMessages + result.messagesSnapshot` if the transcript locator
   cannot be reopened.
 
 Pseudo-flow:
@@ -374,7 +374,7 @@ Pseudo-flow:
 ```ts
 const prePromptMessageCount = historyMessages.length;
 await mirrorTranscriptBestEffort(...);
-const finalMessages = readMirroredSessionHistoryMessages(params.sessionFile)
+const finalMessages = readMirroredSessionHistoryMessages(params.transcriptLocator)
   ?? [...historyMessages, ...result.messagesSnapshot];
 
 await finalizeHarnessContextEngineTurn({
@@ -384,7 +384,7 @@ await finalizeHarnessContextEngineTurn({
   yieldAborted,
   sessionIdUsed: params.sessionId,
   sessionKey: sandboxSessionKey,
-  sessionFile: params.sessionFile,
+  transcriptLocator: params.transcriptLocator,
   messagesSnapshot: finalMessages,
   prePromptMessageCount,
   tokenBudget: params.contextTokenBudget,
@@ -464,7 +464,7 @@ This makes the split auditable.
 ### 9. Session reset and binding behavior
 
 The existing Codex harness `reset(...)` clears the Codex app-server binding from
-the OpenClaw session file. Preserve that behavior.
+the OpenClaw transcript locator. Preserve that behavior.
 
 Also ensure context-engine state cleanup continues to happen through existing
 OpenClaw session lifecycle paths. Do not add Codex-specific cleanup unless the
@@ -495,7 +495,7 @@ Codex-specific additions:
 Add tests under `extensions/codex/src/app-server`:
 
 1. `run-attempt.context-engine.test.ts`
-   - Codex calls `bootstrap` when a session file exists.
+   - Codex calls `bootstrap` when a transcript locator exists.
    - Codex calls `assemble` with mirrored messages, token budget, tool names,
      citations mode, model id, and prompt.
    - `systemPromptAddition` is included in developer instructions.

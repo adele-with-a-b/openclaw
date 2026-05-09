@@ -39,7 +39,7 @@ export async function generateSlugViaLLM(params: {
     const workspaceDir = resolveAgentWorkspaceDir(params.cfg, agentId);
     const agentDir = resolveAgentDir(params.cfg, agentId);
     const sessionId = `slug-generator-${randomUUID()}`;
-    const sessionFile = createSqliteSessionTranscriptLocator({ agentId, sessionId });
+    const transcriptLocator = createSqliteSessionTranscriptLocator({ agentId, sessionId });
 
     const prompt = `Based on this conversation, generate a short 1-2 word filename slug (lowercase, hyphen-separated, no file extension).
 
@@ -58,7 +58,7 @@ Reply with ONLY the slug, nothing else. Examples: "vendor-pitch", "api-design", 
       sessionId,
       sessionKey: "temp:slug-generator",
       agentId,
-      sessionFile,
+      transcriptLocator,
       workspaceDir,
       agentDir,
       config: params.cfg,

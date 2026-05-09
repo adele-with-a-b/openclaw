@@ -41,7 +41,7 @@ vi.mock("../../infra/session-cost-usage.js", async () => {
         return [
           {
             sessionId: "s-main",
-            sessionFile: locator("main", "s-main"),
+            transcriptLocator: locator("main", "s-main"),
             mtime: 100,
             firstUserMessage: "hello",
           },
@@ -51,7 +51,7 @@ vi.mock("../../infra/session-cost-usage.js", async () => {
         return [
           {
             sessionId: "s-opus",
-            sessionFile: locator("opus", "s-opus"),
+            transcriptLocator: locator("opus", "s-opus"),
             mtime: 200,
             firstUserMessage: "hi",
           },
@@ -180,14 +180,14 @@ describe("sessions.usage", () => {
 
     try {
       await withEnvAsync({ OPENCLAW_STATE_DIR: stateDir }, async () => {
-        const sessionFile = createSqliteSessionTranscriptLocator({
+        const transcriptLocator = createSqliteSessionTranscriptLocator({
           agentId: "opus",
           sessionId: "s-opus",
         });
         replaceSqliteSessionTranscriptEvents({
           agentId: "opus",
           sessionId: "s-opus",
-          transcriptPath: sessionFile,
+          transcriptPath: transcriptLocator,
           events: [{ type: "session", id: "s-opus" }],
         });
         // Swap the store mock for this test: the canonical key differs from the discovered key
@@ -197,7 +197,7 @@ describe("sessions.usage", () => {
           entries: {
             [storeKey]: {
               sessionId: "s-opus",
-              sessionFile,
+              transcriptLocator,
               label: "Named session",
               updatedAt: 999,
             },
@@ -232,24 +232,24 @@ describe("sessions.usage", () => {
 
     try {
       await withEnvAsync({ OPENCLAW_STATE_DIR: stateDir }, async () => {
-        const currentSessionFile = createSqliteSessionTranscriptLocator({
+        const currentTranscriptLocator = createSqliteSessionTranscriptLocator({
           agentId: "opus",
           sessionId: "current",
         });
-        const oldSessionFile = createSqliteSessionTranscriptLocator({
+        const oldTranscriptLocator = createSqliteSessionTranscriptLocator({
           agentId: "opus",
           sessionId: "old",
         });
         replaceSqliteSessionTranscriptEvents({
           agentId: "opus",
           sessionId: "current",
-          transcriptPath: currentSessionFile,
+          transcriptPath: currentTranscriptLocator,
           events: [{ type: "session", id: "current" }],
         });
         replaceSqliteSessionTranscriptEvents({
           agentId: "opus",
           sessionId: "old",
-          transcriptPath: oldSessionFile,
+          transcriptPath: oldTranscriptLocator,
           events: [{ type: "session", id: "old" }],
         });
 
@@ -258,7 +258,7 @@ describe("sessions.usage", () => {
           entries: {
             [storeKey]: {
               sessionId: "current",
-              sessionFile: currentSessionFile,
+              transcriptLocator: currentTranscriptLocator,
               updatedAt: 1_000,
               usageFamilyKey: storeKey,
               usageFamilySessionIds: ["old", "current"],
@@ -336,14 +336,14 @@ describe("sessions.usage", () => {
 
     try {
       await withEnvAsync({ OPENCLAW_STATE_DIR: stateDir }, async () => {
-        const sessionFile = createSqliteSessionTranscriptLocator({
+        const transcriptLocator = createSqliteSessionTranscriptLocator({
           agentId: "opus",
           sessionId: "run-dup",
         });
         replaceSqliteSessionTranscriptEvents({
           agentId: "opus",
           sessionId: "run-dup",
-          transcriptPath: sessionFile,
+          transcriptPath: transcriptLocator,
           events: [{ type: "session", id: "run-dup" }],
         });
         vi.mocked(loadCombinedSessionEntriesForGateway).mockReturnValue({
@@ -351,12 +351,12 @@ describe("sessions.usage", () => {
           entries: {
             [preferredKey]: {
               sessionId: "run-dup",
-              sessionFile,
+              transcriptLocator,
               updatedAt: 1_000,
             },
             "agent:other:main": {
               sessionId: "run-dup",
-              sessionFile,
+              transcriptLocator,
               updatedAt: 2_000,
             },
           },

@@ -457,7 +457,7 @@ async function probeTarget(params: {
   const model = target.model;
 
   const sessionId = `probe-${target.provider}-${crypto.randomUUID()}`;
-  const sessionFile = createSqliteSessionTranscriptLocator({ sessionId, agentId });
+  const transcriptLocator = createSqliteSessionTranscriptLocator({ sessionId, agentId });
 
   const start = Date.now();
   const buildResult = (status: AuthProbeResult["status"], error?: string): AuthProbeResult => ({
@@ -475,7 +475,7 @@ async function probeTarget(params: {
     const { runEmbeddedPiAgent } = await loadEmbeddedRunnerModule();
     await runEmbeddedPiAgent({
       sessionId,
-      sessionFile,
+      transcriptLocator,
       agentId,
       workspaceDir,
       agentDir,

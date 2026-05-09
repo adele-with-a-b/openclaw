@@ -208,10 +208,10 @@ export async function repairHeartbeatPoisonedMainSession(params: {
       entry,
       transcriptPath,
     }) ??
-    (mainEntry.sessionFile && mainEntry.sessionFile !== transcriptPath
+    (mainEntry.transcriptLocator && mainEntry.transcriptLocator !== transcriptPath
       ? resolveHeartbeatMainSessionRepairCandidate({
           entry,
-          transcriptPath: mainEntry.sessionFile,
+          transcriptPath: mainEntry.transcriptLocator,
         })
       : null);
   const candidate = resolveCandidate(mainEntry);

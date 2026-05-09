@@ -46,10 +46,10 @@ describe("resolveTranscriptStemToSessionKeys", () => {
   it("returns keys for every agent whose store entry matches the stem", () => {
     const store: Record<string, SessionEntry> = {
       "agent:main:s1": baseEntry({
-        sessionFile: "/data/sessions/stem-a.jsonl",
+        transcriptLocator: "/data/sessions/stem-a.jsonl",
       }),
       "agent:peer:s2": baseEntry({
-        sessionFile: "/other/volume/stem-a.jsonl",
+        transcriptLocator: "/other/volume/stem-a.jsonl",
       }),
     };
     const keys = resolveTranscriptStemToSessionKeys({ store, stem: "stem-a" }).toSorted();

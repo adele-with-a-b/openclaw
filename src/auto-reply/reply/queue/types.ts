@@ -69,7 +69,7 @@ export type FollowupRun = {
     senderE164?: string;
     senderIsOwner?: boolean;
     traceAuthorized?: boolean;
-    sessionFile: string;
+    transcriptLocator: string;
     workspaceDir: string;
     config: OpenClawConfig;
     skillsSnapshot?: SkillSnapshot;

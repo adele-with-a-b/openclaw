@@ -30,8 +30,8 @@ export type CompactionTranscriptRotation = {
   reason?: string;
   sessionId?: string;
   transcriptPath?: string;
-  /** Compatibility metadata for callers that still surface `sessionFile`. */
-  sessionFile?: string;
+  /** Compatibility metadata for callers that still surface `transcriptLocator`. */
+  transcriptLocator?: string;
   compactionEntryId?: string;
   leafId?: string;
   entriesWritten?: number;
@@ -44,10 +44,10 @@ export function shouldRotateCompactionTranscript(config?: OpenClawConfig): boole
 export async function rotateTranscriptAfterCompaction(params: {
   sessionManager: ReadonlySessionManagerForRotation;
   agentId?: string;
-  sessionFile: string;
+  transcriptLocator: string;
   now?: () => Date;
 }): Promise<CompactionTranscriptRotation> {
-  const transcriptLocator = params.sessionFile.trim();
+  const transcriptLocator = params.transcriptLocator.trim();
   if (!transcriptLocator) {
     return { rotated: false, reason: "missing transcript locator" };
   }
@@ -103,7 +103,7 @@ export async function rotateTranscriptAfterCompaction(params: {
     rotated: true,
     sessionId,
     transcriptPath: successorTranscriptPath,
-    sessionFile: successorTranscriptPath,
+    transcriptLocator: successorTranscriptPath,
     compactionEntryId: compaction.id,
     leafId: successorEntries[successorEntries.length - 1]?.id,
     entriesWritten: successorEntries.length,
@@ -112,12 +112,12 @@ export async function rotateTranscriptAfterCompaction(params: {
 
 export async function rotateTranscriptFileAfterCompaction(params: {
   agentId?: string;
-  sessionFile: string;
+  transcriptLocator: string;
   now?: () => Date;
 }): Promise<CompactionTranscriptRotation> {
   const state = loadTranscriptStateFromSqlite({
     agentId: params.agentId,
-    transcriptPath: params.sessionFile,
+    transcriptPath: params.transcriptLocator,
   });
   if (!state) {
     return { rotated: false, reason: "transcript not in SQLite" };
@@ -125,7 +125,7 @@ export async function rotateTranscriptFileAfterCompaction(params: {
   return rotateTranscriptAfterCompaction({
     sessionManager: state,
     agentId: params.agentId,
-    sessionFile: params.sessionFile,
+    transcriptLocator: params.transcriptLocator,
     ...(params.now ? { now: params.now } : {}),
   });
 }

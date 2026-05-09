@@ -362,9 +362,9 @@ function assertAgentTurn() {
   if (entry.modelOverride && entry.modelOverride !== modelRef) {
     throw new Error(`unexpected session model override: ${entry.modelOverride}`);
   }
-  if (typeof entry.sessionFile !== "string" || !entry.sessionFile.trim()) {
+  if (typeof entry.transcriptLocator !== "string" || !entry.transcriptLocator.trim()) {
     throw new Error(
-      `missing OpenClaw transcript key in SQLite session entry: ${entry.sessionFile}`,
+      `missing OpenClaw transcript key in SQLite session entry: ${entry.transcriptLocator}`,
     );
   }
   const transcriptEvents = countAgentTranscriptEvents(sessionId);
@@ -372,7 +372,10 @@ function assertAgentTurn() {
     throw new Error(`missing SQLite transcript events for ${sessionId}`);
   }
 
-  const binding = readOpenClawStateKvJson("codex_app_server_thread_bindings", entry.sessionFile);
+  const binding = readOpenClawStateKvJson(
+    "codex_app_server_thread_bindings",
+    entry.transcriptLocator,
+  );
   if (binding.schemaVersion !== 1 || typeof binding.threadId !== "string") {
     throw new Error(`invalid Codex app-server binding: ${JSON.stringify(binding)}`);
   }

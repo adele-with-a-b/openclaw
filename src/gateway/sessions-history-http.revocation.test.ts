@@ -3,7 +3,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 let transcriptUpdateHandler:
-  | ((update: { sessionFile?: string; message?: unknown; messageId?: string }) => void)
+  | ((update: { transcriptLocator?: string; message?: unknown; messageId?: string }) => void)
   | undefined;
 let authRevoked = false;
 let gatewayConfig: {
@@ -30,7 +30,7 @@ vi.mock("../config/config.js", () => ({
 vi.mock("../config/sessions.js", () => ({
   getSessionEntry: () => ({
     sessionId: "session-1",
-    sessionFile: transcriptFixtures.sessionOne,
+    transcriptLocator: transcriptFixtures.sessionOne,
   }),
   listSessionEntries: () => [],
 }));
@@ -194,7 +194,7 @@ describe("session history SSE auth revocation", () => {
     authRevoked = true;
 
     transcriptUpdateHandler?.({
-      sessionFile: transcriptFixtures.sessionOne,
+      transcriptLocator: transcriptFixtures.sessionOne,
       message: { role: "assistant", content: [{ type: "text", text: "post-revocation secret" }] },
       messageId: "m-1",
     });
@@ -229,7 +229,7 @@ describe("session history SSE auth revocation", () => {
     };
 
     transcriptUpdateHandler?.({
-      sessionFile: transcriptFixtures.sessionOne,
+      transcriptLocator: transcriptFixtures.sessionOne,
       message: { role: "assistant", content: [{ type: "text", text: "stale-proxy event" }] },
       messageId: "m-2",
     });
@@ -265,7 +265,7 @@ describe("session history SSE auth revocation", () => {
     };
 
     transcriptUpdateHandler?.({
-      sessionFile: transcriptFixtures.otherSession,
+      transcriptLocator: transcriptFixtures.otherSession,
       message: { role: "assistant", content: [{ type: "text", text: "other session" }] },
       messageId: "m-3",
     });

@@ -48,12 +48,12 @@ describe("SQLite session store backend", () => {
     const env = { OPENCLAW_STATE_DIR: stateDir };
     const mainEntry: SessionEntry = {
       sessionId: "main-session",
-      sessionFile: sqliteTranscript("main", "main-session"),
+      transcriptLocator: sqliteTranscript("main", "main-session"),
       updatedAt: 123,
     };
     const opsEntry: SessionEntry = {
       sessionId: "ops-session",
-      sessionFile: sqliteTranscript("ops", "ops-session"),
+      transcriptLocator: sqliteTranscript("ops", "ops-session"),
       updatedAt: 456,
     };
 
@@ -77,7 +77,7 @@ describe("SQLite session store backend", () => {
     });
     const entry: SessionEntry = {
       sessionId: "sqlite-primary",
-      sessionFile: sqliteTranscript("ops", "sqlite-primary"),
+      transcriptLocator: sqliteTranscript("ops", "sqlite-primary"),
       updatedAt: 100,
     };
 
@@ -112,7 +112,7 @@ describe("SQLite session store backend", () => {
       sessionKey: "discord:ops",
       entry: {
         sessionId: "ops-session",
-        sessionFile: sqliteTranscript("ops", "ops-session"),
+        transcriptLocator: sqliteTranscript("ops", "ops-session"),
         updatedAt: 100,
       },
     });
@@ -122,7 +122,7 @@ describe("SQLite session store backend", () => {
       sessionKey: "discord:other",
       entry: {
         sessionId: "other-session",
-        sessionFile: sqliteTranscript("ops", "other-session"),
+        transcriptLocator: sqliteTranscript("ops", "other-session"),
         updatedAt: 50,
       },
     });
@@ -138,12 +138,12 @@ describe("SQLite session store backend", () => {
     expect(loadSqliteSessionEntries({ agentId: "ops", env })).toEqual({
       "discord:ops": expect.objectContaining({
         sessionId: "ops-session",
-        sessionFile: sqliteTranscript("ops", "ops-session"),
+        transcriptLocator: sqliteTranscript("ops", "ops-session"),
         modelOverride: "gpt-5.5",
       }),
       "discord:other": {
         sessionId: "other-session",
-        sessionFile: sqliteTranscript("ops", "other-session"),
+        transcriptLocator: sqliteTranscript("ops", "other-session"),
         updatedAt: 50,
       },
     });
@@ -159,7 +159,7 @@ describe("SQLite session store backend", () => {
       sessionKey: "discord:ops",
       entry: {
         sessionId: "ops-session",
-        sessionFile: sqliteTranscript("ops", "ops-session"),
+        transcriptLocator: sqliteTranscript("ops", "ops-session"),
         updatedAt: 100,
       },
     });
@@ -169,7 +169,7 @@ describe("SQLite session store backend", () => {
       sessionKey: "discord:other",
       entry: {
         sessionId: "other-session",
-        sessionFile: sqliteTranscript("ops", "other-session"),
+        transcriptLocator: sqliteTranscript("ops", "other-session"),
         updatedAt: 50,
       },
     });
@@ -195,7 +195,7 @@ describe("SQLite session store backend", () => {
     });
     const entry: SessionEntry = {
       sessionId: "sqlite-default",
-      sessionFile: sqliteTranscript("ops", "sqlite-default"),
+      transcriptLocator: sqliteTranscript("ops", "sqlite-default"),
       updatedAt: 100,
     };
 

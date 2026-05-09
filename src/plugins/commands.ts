@@ -184,7 +184,7 @@ export async function executePluginCommand(params: {
   gatewayClientScopes?: PluginCommandContext["gatewayClientScopes"];
   sessionKey?: PluginCommandContext["sessionKey"];
   sessionId?: PluginCommandContext["sessionId"];
-  sessionFile?: PluginCommandContext["sessionFile"];
+  transcriptLocator?: PluginCommandContext["transcriptLocator"];
   commandBody: string;
   config: OpenClawConfig;
   from?: PluginCommandContext["from"];
@@ -291,7 +291,7 @@ export async function executePluginCommand(params: {
     gatewayClientScopes: params.gatewayClientScopes,
     sessionKey: params.sessionKey,
     sessionId: params.sessionId,
-    sessionFile: params.sessionFile,
+    transcriptLocator: params.transcriptLocator,
     args: sanitizedArgs,
     commandBody,
     config,

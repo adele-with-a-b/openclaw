@@ -141,7 +141,7 @@ export function createSessionsListTool(opts?: {
         row: SessionListRow;
         titleEntry: SessionEntry;
         sessionId: string;
-        sessionFile?: string;
+        transcriptLocator?: string;
         agentId: string;
       }> = [];
 
@@ -217,8 +217,8 @@ export function createSessionsListTool(opts?: {
         });
 
         const sessionId = readStringValue(entry.sessionId);
-        const sessionFileRaw = (entry as { sessionFile?: unknown }).sessionFile;
-        const sessionFile = readStringValue(sessionFileRaw);
+        const transcriptLocatorRaw = (entry as { transcriptLocator?: unknown }).transcriptLocator;
+        const transcriptLocator = readStringValue(transcriptLocatorRaw);
         const resolvedAgentId = resolveAgentIdFromSessionKey(key);
 
         const row: SessionListRow = {
@@ -314,7 +314,7 @@ export function createSessionsListTool(opts?: {
               updatedAt: typeof row.updatedAt === "number" ? row.updatedAt : 0,
             },
             sessionId,
-            ...(sessionFile ? { sessionFile } : {}),
+            ...(transcriptLocator ? { transcriptLocator } : {}),
             agentId: resolvedAgentId,
           });
         }
@@ -342,7 +342,7 @@ export function createSessionsListTool(opts?: {
             const target = titleTargets[next];
             const fields = await readSessionTitleFieldsFromTranscriptAsync(
               target.sessionId,
-              target.sessionFile,
+              target.transcriptLocator,
               target.agentId,
             );
             if (includeDerivedTitles && !target.row.derivedTitle) {

@@ -236,14 +236,14 @@ export function initFastReplySessionState(params: {
     ? normalizedResetBody.slice(resetMatch?.[0].length ?? 0).trimStart()
     : (ctx.BodyForAgent ?? ctx.Body ?? "");
   const now = Date.now();
-  const sessionFile =
-    !resetTriggered && existingEntry?.sessionFile
-      ? existingEntry.sessionFile
+  const transcriptLocator =
+    !resetTriggered && existingEntry?.transcriptLocator
+      ? existingEntry.transcriptLocator
       : createSqliteSessionTranscriptLocator({ sessionId, agentId });
   const sessionEntry: SessionEntry = {
     ...(!resetTriggered ? existingEntry : undefined),
     sessionId,
-    sessionFile,
+    transcriptLocator,
     updatedAt: now,
     sessionStartedAt: resetTriggered ? now : (existingEntry?.sessionStartedAt ?? now),
     lastInteractionAt: now,

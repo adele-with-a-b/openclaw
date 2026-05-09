@@ -157,7 +157,7 @@ function hasScopedSqliteTranscriptEvents(params: { agentId: string; sessionId: s
 
 async function readSessionDataFromTranscript(params: {
   agentId: string;
-  sessionFile: string;
+  transcriptLocator: string;
   sessionId: string;
 }): Promise<{
   header: SessionHeader | null;
@@ -166,7 +166,7 @@ async function readSessionDataFromTranscript(params: {
 }> {
   if (!hasScopedSqliteTranscriptEvents(params)) {
     throw new Error(
-      `Transcript is not in SQLite: ${params.sessionFile}. Run "openclaw doctor --fix" to import legacy JSONL transcripts.`,
+      `Transcript is not in SQLite: ${params.transcriptLocator}. Run "openclaw doctor --fix" to import legacy JSONL transcripts.`,
     );
   }
   const raw = exportSqliteSessionTranscriptJsonl(params);
@@ -192,7 +192,7 @@ export async function buildExportSessionReply(params: HandleCommandsParams): Pro
   if (isReplyPayload(sessionTarget)) {
     return sessionTarget;
   }
-  const { agentId, entry, sessionFile } = sessionTarget;
+  const { agentId, entry, transcriptLocator } = sessionTarget;
 
   if (!hasScopedSqliteTranscriptEvents({ agentId, sessionId: entry.sessionId })) {
     return {
@@ -203,7 +203,7 @@ export async function buildExportSessionReply(params: HandleCommandsParams): Pro
   // 2. Load session entries
   const { entries, header, leafId } = await readSessionDataFromTranscript({
     agentId,
-    sessionFile,
+    transcriptLocator,
     sessionId: entry.sessionId,
   });
 

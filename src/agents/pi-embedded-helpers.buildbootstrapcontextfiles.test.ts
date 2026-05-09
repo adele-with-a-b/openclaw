@@ -42,20 +42,20 @@ describe("ensureSessionHeader", () => {
   it("creates the transcript header in SQLite without writing a JSONL file", async () => {
     const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-session-header-"));
     try {
-      const sessionFile = path.join(tempDir, "nested", "session.jsonl");
+      const transcriptLocator = path.join(tempDir, "nested", "session.jsonl");
       const env = {
         ...process.env,
         OPENCLAW_STATE_DIR: path.join(tempDir, "state"),
       };
       await ensureSessionHeader({
-        sessionFile,
+        transcriptLocator,
         sessionId: "session-1",
         cwd: tempDir,
         agentId: "main",
         env,
       });
 
-      await expect(fs.access(sessionFile)).rejects.toThrow();
+      await expect(fs.access(transcriptLocator)).rejects.toThrow();
       const events = loadSqliteSessionTranscriptEvents({
         agentId: "main",
         sessionId: "session-1",

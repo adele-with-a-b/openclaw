@@ -22,12 +22,13 @@ export async function resolveAndPersistSessionTranscriptLocator(params: {
       updatedAt: now,
       sessionStartedAt: now,
     };
-  const persistedSessionFile = baseEntry.sessionFile?.trim();
-  const shouldReusePersistedSessionFile =
-    baseEntry.sessionId === sessionId && isSqliteSessionTranscriptLocator(persistedSessionFile);
+  const persistedTranscriptLocator = baseEntry.transcriptLocator?.trim();
+  const shouldReusePersistedTranscriptLocator =
+    baseEntry.sessionId === sessionId &&
+    isSqliteSessionTranscriptLocator(persistedTranscriptLocator);
   const fallbackTranscriptLocator = params.fallbackTranscriptLocator?.trim();
-  const transcriptLocator = shouldReusePersistedSessionFile
-    ? persistedSessionFile!
+  const transcriptLocator = shouldReusePersistedTranscriptLocator
+    ? persistedTranscriptLocator!
     : fallbackTranscriptLocator && isSqliteSessionTranscriptLocator(fallbackTranscriptLocator)
       ? fallbackTranscriptLocator
       : createSqliteSessionTranscriptLocator({ agentId, sessionId });
@@ -36,9 +37,9 @@ export async function resolveAndPersistSessionTranscriptLocator(params: {
     sessionId,
     updatedAt: now,
     sessionStartedAt: baseEntry.sessionId === sessionId ? (baseEntry.sessionStartedAt ?? now) : now,
-    sessionFile: transcriptLocator,
+    transcriptLocator,
   };
-  if (baseEntry.sessionId !== sessionId || baseEntry.sessionFile !== transcriptLocator) {
+  if (baseEntry.sessionId !== sessionId || baseEntry.transcriptLocator !== transcriptLocator) {
     upsertSessionEntry({
       agentId,
       sessionKey,

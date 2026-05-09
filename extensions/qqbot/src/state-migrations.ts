@@ -120,7 +120,7 @@ function importRefIndex(sourcePath: string, env: NodeJS.ProcessEnv): number {
 function importSession(sourcePath: string, env: NodeJS.ProcessEnv): number {
   const parsed = JSON.parse(fs.readFileSync(sourcePath, "utf8")) as unknown;
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-    throw new Error("QQBot session file must contain an object");
+    throw new Error("QQBot transcript locator must contain an object");
   }
   const session = parsed as Record<string, unknown>;
   const accountId = typeof session.accountId === "string" ? session.accountId : "";

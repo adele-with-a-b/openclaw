@@ -526,7 +526,7 @@ async function persistAcpSpawnSessionRowBestEffort(params: {
         sessionStartedAt: now,
       }),
       sessionId: params.sessionId,
-      sessionFile: params.sessionId,
+      transcriptLocator: params.sessionId,
     };
     upsertSessionEntry({
       agentId: params.agentId,

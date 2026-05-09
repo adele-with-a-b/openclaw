@@ -10,14 +10,14 @@ afterEach(() => {
 });
 
 describe("transcript events", () => {
-  it("emits trimmed session file updates", () => {
+  it("emits trimmed transcript locator updates", () => {
     const listener = vi.fn();
     cleanup.push(onSessionTranscriptUpdate(listener));
 
     emitSessionTranscriptUpdate("  /tmp/session.jsonl  ");
 
     expect(listener).toHaveBeenCalledTimes(1);
-    expect(listener).toHaveBeenCalledWith({ sessionFile: "/tmp/session.jsonl" });
+    expect(listener).toHaveBeenCalledWith({ transcriptLocator: "/tmp/session.jsonl" });
   });
 
   it("includes optional session metadata when provided", () => {
@@ -27,7 +27,7 @@ describe("transcript events", () => {
     emitSessionTranscriptUpdate({
       agentId: "  main  ",
       sessionId: "  sess-1  ",
-      sessionFile: "  /tmp/session.jsonl  ",
+      transcriptLocator: "  /tmp/session.jsonl  ",
       sessionKey: "  agent:main:main  ",
       message: { role: "assistant", content: "hi" },
       messageId: "  msg-1  ",
@@ -36,7 +36,7 @@ describe("transcript events", () => {
     expect(listener).toHaveBeenCalledWith({
       agentId: "main",
       sessionId: "sess-1",
-      sessionFile: "/tmp/session.jsonl",
+      transcriptLocator: "/tmp/session.jsonl",
       sessionKey: "agent:main:main",
       message: { role: "assistant", content: "hi" },
       messageId: "msg-1",

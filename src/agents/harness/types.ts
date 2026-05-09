@@ -19,7 +19,7 @@ export type AgentHarnessCompactResult =
 export type AgentHarnessResetParams = {
   sessionId?: string;
   sessionKey?: string;
-  sessionFile?: string;
+  transcriptLocator?: string;
   reason?: "new" | "reset" | "idle" | "daily" | "compaction" | "deleted" | "unknown";
 };
 

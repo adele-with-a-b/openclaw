@@ -473,7 +473,7 @@ export async function runCodexAppServerAttempt(
   const agentDir = params.agentDir ?? resolveAgentDir(params.config ?? {}, sessionAgentId);
   const startupBinding = await readCodexAppServerBinding({
     sessionKey: sandboxSessionKey,
-    sessionFile: params.sessionFile,
+    transcriptLocator: params.transcriptLocator,
   });
   const startupAuthProfileCandidate =
     params.runtimePlan?.auth.forwardedAuthProfileId ??
@@ -536,14 +536,14 @@ export async function runCodexAppServerAttempt(
       runId: params.runId,
     },
   });
-  const hadSessionFile = hasSqliteSessionTranscriptEvents({
+  const hadTranscriptLocator = hasSqliteSessionTranscriptEvents({
     agentId: sessionAgentId,
     sessionId: params.sessionId,
   });
   let historyMessages =
     (await readMirroredSessionHistoryMessages({
       agentId: sessionAgentId,
-      sessionFile: params.sessionFile,
+      transcriptLocator: params.transcriptLocator,
       sessionId: params.sessionId,
     })) ?? [];
   const hookContext = {
@@ -558,11 +558,11 @@ export async function runCodexAppServerAttempt(
   };
   if (activeContextEngine) {
     await bootstrapHarnessContextEngine({
-      hadSessionFile,
+      hadTranscriptLocator,
       contextEngine: activeContextEngine,
       sessionId: params.sessionId,
       sessionKey: sandboxSessionKey,
-      sessionFile: params.sessionFile,
+      transcriptLocator: params.transcriptLocator,
       runtimeContext: buildHarnessContextEngineRuntimeContext({
         attempt: runtimeParams,
         workspaceDir: effectiveWorkspace,
@@ -576,7 +576,7 @@ export async function runCodexAppServerAttempt(
     historyMessages =
       (await readMirroredSessionHistoryMessages({
         agentId: sessionAgentId,
-        sessionFile: params.sessionFile,
+        transcriptLocator: params.transcriptLocator,
         sessionId: params.sessionId,
       })) ?? historyMessages;
   }
@@ -828,7 +828,7 @@ export async function runCodexAppServerAttempt(
     throw error;
   }
   trajectoryRecorder?.recordEvent("session.started", {
-    sessionFile: params.sessionFile,
+    transcriptLocator: params.transcriptLocator,
     threadId: thread.threadId,
     authProfileId: startupAuthProfileId,
     workspaceDir: effectiveWorkspace,
@@ -1462,7 +1462,7 @@ export async function runCodexAppServerAttempt(
       const finalMessages =
         (await readMirroredSessionHistoryMessages({
           agentId: sessionAgentId,
-          sessionFile: params.sessionFile,
+          transcriptLocator: params.transcriptLocator,
           sessionId: params.sessionId,
         })) ?? historyMessages.concat(result.messagesSnapshot);
       await finalizeHarnessContextEngineTurn({
@@ -1472,7 +1472,7 @@ export async function runCodexAppServerAttempt(
         yieldAborted: Boolean(result.yieldDetected),
         sessionIdUsed: params.sessionId,
         sessionKey: sandboxSessionKey,
-        sessionFile: params.sessionFile,
+        transcriptLocator: params.transcriptLocator,
         messagesSnapshot: finalMessages,
         prePromptMessageCount,
         tokenBudget: params.contextTokenBudget,
@@ -2089,13 +2089,13 @@ function readString(record: JsonObject, key: string): string | undefined {
 
 async function readMirroredSessionHistoryMessages(scope: {
   agentId: string;
-  sessionFile: string;
+  transcriptLocator: string;
   sessionId: string;
 }): Promise<AgentMessage[] | undefined> {
   const messages = await readCodexMirroredSessionHistoryMessages(scope);
   if (!messages) {
     embeddedAgentLog.warn("failed to read mirrored session history for codex harness hooks", {
-      sessionFile: scope.sessionFile,
+      transcriptLocator: scope.transcriptLocator,
     });
   }
   return messages;
@@ -2220,7 +2220,7 @@ async function mirrorTranscriptBestEffort(params: {
 }): Promise<void> {
   try {
     await mirrorCodexAppServerTranscript({
-      sessionFile: params.params.sessionFile,
+      transcriptLocator: params.params.transcriptLocator,
       sessionId: params.params.sessionId,
       agentId: params.agentId,
       sessionKey: params.sessionKey,

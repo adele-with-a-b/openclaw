@@ -1406,7 +1406,7 @@ async function readSessionAssistantTexts(sessionKey: string, modelKey?: string):
   if (!entry?.sessionId) {
     return [];
   }
-  const messages = await readSessionMessagesAsync(entry.sessionId, entry.sessionFile, {
+  const messages = await readSessionMessagesAsync(entry.sessionId, entry.transcriptLocator, {
     mode: "full",
     reason: "live model assistant text verification",
   });

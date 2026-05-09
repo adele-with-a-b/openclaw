@@ -828,7 +828,7 @@ describe("runHeartbeatOnce", () => {
     }
   });
 
-  it("reuses non-default agent sessionFile from templated stores", async () => {
+  it("reuses non-default agent transcriptLocator from templated stores", async () => {
     const tmpDir = await createCaseDir("hb-templated-store");
     const replySpy = vi.fn();
     const agentId = "ops";
@@ -854,12 +854,12 @@ describe("runHeartbeatOnce", () => {
       const target = sessionRowsTarget(tmpDir, agentId);
       const { transcriptDir } = target;
       const sessionId = "sid-ops";
-      const sessionFile = path.join(transcriptDir, `${sessionId}.jsonl`);
+      const transcriptLocator = path.join(transcriptDir, `${sessionId}.jsonl`);
 
       await replaceTestSessionRows(target, {
         [sessionKey]: {
           sessionId,
-          sessionFile,
+          transcriptLocator,
           updatedAt: Date.now(),
           lastChannel: "whatsapp",
           lastTo: "120363401234567890@g.us",

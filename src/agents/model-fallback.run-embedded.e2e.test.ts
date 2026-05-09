@@ -266,7 +266,7 @@ async function runEmbeddedFallback(params: {
       runEmbeddedPiAgent({
         sessionId,
         sessionKey: params.sessionKey,
-        sessionFile: createTestSessionTranscriptLocator({
+        transcriptLocator: createTestSessionTranscriptLocator({
           sessionKey: params.sessionKey,
           sessionId,
         }),
@@ -419,7 +419,7 @@ describe("runWithModelFallback + runEmbeddedPiAgent failover behavior", () => {
       const result = await runEmbeddedPiAgent({
         sessionId: "tool-side-effect-terminal",
         sessionKey: "agent:test:tool-side-effect-terminal",
-        sessionFile: createTestSessionTranscriptLocator({
+        transcriptLocator: createTestSessionTranscriptLocator({
           sessionKey: "agent:test:tool-side-effect-terminal",
           sessionId: "tool-side-effect-terminal",
         }),

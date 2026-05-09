@@ -65,7 +65,7 @@ function buildMirrorDedupeIdentity(message: MirroredAgentMessage): string {
 }
 
 export async function mirrorCodexAppServerTranscript(params: {
-  sessionFile: string;
+  transcriptLocator: string;
   sessionId?: string;
   sessionKey?: string;
   agentId?: string;
@@ -85,7 +85,7 @@ export async function mirrorCodexAppServerTranscript(params: {
   const sessionId =
     params.sessionId?.trim() ||
     path
-      .basename(params.sessionFile)
+      .basename(params.transcriptLocator)
       .replace(/\.jsonl$/i, "")
       .trim();
 
@@ -115,7 +115,7 @@ export async function mirrorCodexAppServerTranscript(params: {
         : nextMessage
     ) as AgentMessage;
     await appendSessionTranscriptMessage({
-      transcriptPath: params.sessionFile,
+      transcriptPath: params.transcriptLocator,
       agentId,
       sessionId,
       message: messageToAppend,
@@ -127,14 +127,14 @@ export async function mirrorCodexAppServerTranscript(params: {
     emitSessionTranscriptUpdate({
       agentId,
       sessionId,
-      sessionFile: params.sessionFile,
+      transcriptLocator: params.transcriptLocator,
       sessionKey: params.sessionKey,
     });
   } else {
     emitSessionTranscriptUpdate({
       agentId,
       sessionId,
-      sessionFile: params.sessionFile,
+      transcriptLocator: params.transcriptLocator,
     });
   }
 }

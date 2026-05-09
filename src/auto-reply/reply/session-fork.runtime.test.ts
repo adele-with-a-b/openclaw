@@ -101,7 +101,7 @@ describe("resolveParentForkTokenCountRuntime", () => {
 
     const entry: SessionEntry = {
       sessionId,
-      sessionFile: transcriptLocator,
+      transcriptLocator: transcriptLocator,
       updatedAt: Date.now(),
       totalTokens: 1,
       totalTokensFresh: false,
@@ -143,7 +143,7 @@ describe("resolveParentForkTokenCountRuntime", () => {
 
     const entry: SessionEntry = {
       sessionId,
-      sessionFile: transcriptLocator,
+      transcriptLocator: transcriptLocator,
       updatedAt: Date.now(),
       totalTokensFresh: false,
     };
@@ -192,7 +192,7 @@ describe("resolveParentForkTokenCountRuntime", () => {
 
     const entry: SessionEntry = {
       sessionId,
-      sessionFile: transcriptLocator,
+      transcriptLocator: transcriptLocator,
       updatedAt: Date.now(),
       totalTokensFresh: false,
     };
@@ -240,7 +240,7 @@ describe("resolveParentForkTokenCountRuntime", () => {
 
     const entry: SessionEntry = {
       sessionId,
-      sessionFile: transcriptLocator,
+      transcriptLocator: transcriptLocator,
       updatedAt: Date.now(),
       totalTokensFresh: false,
     };
@@ -309,7 +309,7 @@ describe("forkSessionFromParentRuntime", () => {
     const fork = await forkSessionFromParentRuntime({
       parentEntry: {
         sessionId: parentSessionId,
-        sessionFile: parentTranscriptLocator,
+        transcriptLocator: parentTranscriptLocator,
         updatedAt: Date.now(),
       },
       agentId: "main",
@@ -318,7 +318,7 @@ describe("forkSessionFromParentRuntime", () => {
     if (fork === null) {
       throw new Error("Expected forked session");
     }
-    expect(fork.sessionFile).toBe(
+    expect(fork.transcriptLocator).toBe(
       createSqliteSessionTranscriptLocator({ agentId: "main", sessionId: fork.sessionId }),
     );
     expect(fork.sessionId).not.toBe(parentSessionId);
@@ -367,7 +367,7 @@ describe("forkSessionFromParentRuntime", () => {
     const fork = await forkSessionFromParentRuntime({
       parentEntry: {
         sessionId: parentSessionId,
-        sessionFile: parentTranscriptLocator,
+        transcriptLocator: parentTranscriptLocator,
         updatedAt: Date.now(),
       },
       agentId: "main",

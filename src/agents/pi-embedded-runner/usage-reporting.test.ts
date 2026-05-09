@@ -48,7 +48,7 @@ describe("runEmbeddedPiAgent usage reporting", () => {
     await runEmbeddedPiAgent({
       sessionId: "test-session",
       sessionKey: "test-key",
-      sessionFile: TEST_SESSION_FILE,
+      transcriptLocator: TEST_SESSION_FILE,
       workspaceDir: "/tmp/workspace",
       prompt: "hello",
       timeoutMs: 30000,
@@ -71,7 +71,7 @@ describe("runEmbeddedPiAgent usage reporting", () => {
     await runEmbeddedPiAgent({
       sessionId: "test-session",
       sessionKey: "test-key",
-      sessionFile: TEST_SESSION_FILE,
+      transcriptLocator: TEST_SESSION_FILE,
       workspaceDir: "/tmp/workspace",
       prompt: "hello",
       timeoutMs: 30000,
@@ -101,7 +101,7 @@ describe("runEmbeddedPiAgent usage reporting", () => {
     await runEmbeddedPiAgent({
       sessionId: "test-session",
       sessionKey: "test-key",
-      sessionFile: TEST_SESSION_FILE,
+      transcriptLocator: TEST_SESSION_FILE,
       workspaceDir: "/tmp/workspace",
       prompt: "hello",
       timeoutMs: 30000,
@@ -132,7 +132,7 @@ describe("runEmbeddedPiAgent usage reporting", () => {
     await runEmbeddedPiAgent({
       sessionId: "test-session",
       sessionKey: "test-key",
-      sessionFile: TEST_SESSION_FILE,
+      transcriptLocator: TEST_SESSION_FILE,
       workspaceDir: "/tmp/workspace",
       prompt: "flush",
       timeoutMs: 30000,
@@ -178,7 +178,7 @@ describe("runEmbeddedPiAgent usage reporting", () => {
     const result = await runEmbeddedPiAgent({
       sessionId: "test-session",
       sessionKey: "test-key",
-      sessionFile: TEST_SESSION_FILE,
+      transcriptLocator: TEST_SESSION_FILE,
       workspaceDir: "/tmp/workspace",
       prompt: "hello",
       timeoutMs: 30000,
@@ -223,7 +223,7 @@ describe("runEmbeddedPiAgent usage reporting", () => {
     const result = await runEmbeddedPiAgent({
       sessionId: "test-session",
       sessionKey: "test-key",
-      sessionFile: TEST_SESSION_FILE,
+      transcriptLocator: TEST_SESSION_FILE,
       workspaceDir: "/tmp/workspace",
       prompt: "hello",
       provider: "openrouter",

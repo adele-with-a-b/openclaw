@@ -38,7 +38,7 @@ function sessionKeyMatchesTranscriptLocator(params: {
   const sessionAgentId = normalizeAgentId(target.agentId);
   return resolveSessionTranscriptCandidates(
     entry.sessionId,
-    entry.sessionFile,
+    entry.transcriptLocator,
     sessionAgentId,
   ).some((candidate) => resolveTranscriptIdentityForComparison(candidate) === params.targetLocator);
 }

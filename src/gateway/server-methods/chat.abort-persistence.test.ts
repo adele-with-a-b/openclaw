@@ -33,7 +33,7 @@ vi.mock("../session-utils.js", async () => {
       cfg: {},
       entry: {
         sessionId: sessionEntryState.sessionId,
-        sessionFile: sessionEntryState.transcriptPath,
+        transcriptLocator: sessionEntryState.transcriptPath,
       },
       canonicalKey: "main",
     }),

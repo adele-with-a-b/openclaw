@@ -707,16 +707,16 @@ export async function initSessionState(params: {
       if (forked) {
         sessionId = forked.sessionId;
         sessionEntry.sessionId = forked.sessionId;
-        sessionEntry.sessionFile = forked.sessionFile;
+        sessionEntry.transcriptLocator = forked.transcriptLocator;
         sessionEntry.forkedFromParent = true;
-        log.warn(`forked session created: transcript=${forked.sessionFile}`);
+        log.warn(`forked session created: transcript=${forked.transcriptLocator}`);
       }
     }
   }
   const threadIdFromSessionKey = parseSessionThreadInfoFast(
     sessionCtxForState.SessionKey ?? sessionKey,
   ).threadId;
-  const fallbackTranscriptLocator = !sessionEntry.sessionFile
+  const fallbackTranscriptLocator = !sessionEntry.transcriptLocator
     ? createSqliteSessionTranscriptLocator({
         sessionId: sessionEntry.sessionId,
         agentId,
@@ -762,12 +762,12 @@ export async function initSessionState(params: {
 
   // Resolve the previous transcript before rotating session metadata.
   let previousSessionTranscript: {
-    sessionFile?: string;
+    transcriptLocator?: string;
   } = {};
   if (previousSessionEntry?.sessionId) {
     previousSessionTranscript = resolveStableSessionEndTranscript({
       sessionId: previousSessionEntry.sessionId,
-      sessionFile: previousSessionEntry.sessionFile,
+      transcriptLocator: previousSessionEntry.transcriptLocator,
       agentId,
     });
     await retireSessionMcpRuntime({
@@ -782,7 +782,7 @@ export async function initSessionState(params: {
     await resetRegisteredAgentHarnessSessions({
       sessionId: previousSessionEntry.sessionId,
       sessionKey,
-      sessionFile: previousSessionEntry.sessionFile,
+      transcriptLocator: previousSessionEntry.transcriptLocator,
       reason: previousSessionEndReason ?? "unknown",
     });
     void closeTrackedBrowserTabsForSessions({
@@ -823,7 +823,7 @@ export async function initSessionState(params: {
           sessionKey,
           cfg,
           reason: previousSessionEndReason,
-          sessionFile: previousSessionTranscript.sessionFile,
+          transcriptLocator: previousSessionTranscript.transcriptLocator,
           nextSessionId: effectiveSessionId,
         });
         void hookRunner.runSessionEnd(payload.event, payload.context).catch(() => {});

@@ -316,11 +316,11 @@ export type PluginHookBeforeCompactionEvent = {
   compactingCount?: number;
   tokenCount?: number;
   messages?: unknown[];
-  sessionFile?: string;
+  transcriptLocator?: string;
 };
 
 export type PluginHookBeforeResetEvent = {
-  sessionFile?: string;
+  transcriptLocator?: string;
   messages?: unknown[];
   reason?: string;
 };
@@ -329,7 +329,7 @@ export type PluginHookAfterCompactionEvent = {
   messageCount: number;
   tokenCount?: number;
   compactedCount: number;
-  sessionFile?: string;
+  transcriptLocator?: string;
 };
 
 export type PluginHookInboundClaimResult = {
@@ -515,7 +515,7 @@ export type PluginHookSessionEndEvent = {
   messageCount: number;
   durationMs?: number;
   reason?: PluginHookSessionEndReason;
-  sessionFile?: string;
+  transcriptLocator?: string;
   nextSessionId?: string;
   nextSessionKey?: string;
 };

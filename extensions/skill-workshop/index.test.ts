@@ -750,7 +750,9 @@ describe("skill-workshop", () => {
       expect.objectContaining({
         disableTools: true,
         toolsAllow: [],
-        sessionFile: expect.stringMatching(/^sqlite-transcript:\/\/main\/skill-workshop-review-/u),
+        transcriptLocator: expect.stringMatching(
+          /^sqlite-transcript:\/\/main\/skill-workshop-review-/u,
+        ),
         provider: "openai",
         model: "gpt-5.4",
       }),

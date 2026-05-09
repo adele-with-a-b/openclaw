@@ -528,8 +528,8 @@ async function prepareCronRunContext(params: {
     forceNew: input.job.sessionTarget === "isolated",
   });
   const runSessionId = cronSession.sessionEntry.sessionId;
-  if (!cronSession.sessionEntry.sessionFile?.trim()) {
-    cronSession.sessionEntry.sessionFile = createSqliteSessionTranscriptLocator({
+  if (!cronSession.sessionEntry.transcriptLocator?.trim()) {
+    cronSession.sessionEntry.transcriptLocator = createSqliteSessionTranscriptLocator({
       sessionId: runSessionId,
       agentId,
     });

@@ -467,7 +467,7 @@ async function runAutoPinnedOpenAiTurn(params: {
   await runEmbeddedPiAgentInline({
     sessionId: TEST_SESSION_ID,
     sessionKey: params.sessionKey,
-    sessionFile: createTestSessionTranscriptLocator(params.sessionKey),
+    transcriptLocator: createTestSessionTranscriptLocator(params.sessionKey),
     workspaceDir: params.workspaceDir,
     agentDir: params.agentDir,
     config: params.config ?? makeConfig(),
@@ -621,7 +621,7 @@ async function runTurnWithCooldownSeed(params: {
     await runEmbeddedPiAgentInline({
       sessionId: TEST_SESSION_ID,
       sessionKey: params.sessionKey,
-      sessionFile: createTestSessionTranscriptLocator(),
+      transcriptLocator: createTestSessionTranscriptLocator(),
       workspaceDir,
       agentDir,
       config: makeConfig(),
@@ -686,7 +686,7 @@ describe("runEmbeddedPiAgent auth profile rotation", () => {
       await runEmbeddedPiAgentInline({
         sessionId: TEST_SESSION_ID,
         sessionKey: "agent:test:copilot-auth-error",
-        sessionFile: createTestSessionTranscriptLocator(),
+        transcriptLocator: createTestSessionTranscriptLocator(),
         workspaceDir,
         agentDir,
         config: makeCopilotConfig(),
@@ -771,7 +771,7 @@ describe("runEmbeddedPiAgent auth profile rotation", () => {
       await runEmbeddedPiAgentInline({
         sessionId: TEST_SESSION_ID,
         sessionKey: "agent:test:copilot-auth-repeat",
-        sessionFile: createTestSessionTranscriptLocator(),
+        transcriptLocator: createTestSessionTranscriptLocator(),
         workspaceDir,
         agentDir,
         config: makeCopilotConfig(),
@@ -819,7 +819,7 @@ describe("runEmbeddedPiAgent auth profile rotation", () => {
       const runPromise = runEmbeddedPiAgentInline({
         sessionId: TEST_SESSION_ID,
         sessionKey: "agent:test:copilot-shutdown",
-        sessionFile: createTestSessionTranscriptLocator(),
+        transcriptLocator: createTestSessionTranscriptLocator(),
         workspaceDir,
         agentDir,
         config: makeCopilotConfig(),
@@ -1024,7 +1024,7 @@ describe("runEmbeddedPiAgent auth profile rotation", () => {
       const result = await runEmbeddedPiAgentInline({
         sessionId: TEST_SESSION_ID,
         sessionKey: "agent:test:compaction-timeout",
-        sessionFile: createTestSessionTranscriptLocator(),
+        transcriptLocator: createTestSessionTranscriptLocator(),
         workspaceDir,
         agentDir,
         config: makeConfig(),
@@ -1063,7 +1063,7 @@ describe("runEmbeddedPiAgent auth profile rotation", () => {
       const result = await runEmbeddedPiAgentInline({
         sessionId: TEST_SESSION_ID,
         sessionKey: "agent:test:compaction-wait-abort",
-        sessionFile: createTestSessionTranscriptLocator(),
+        transcriptLocator: createTestSessionTranscriptLocator(),
         workspaceDir,
         agentDir,
         config: makeConfig(),
@@ -1092,7 +1092,7 @@ describe("runEmbeddedPiAgent auth profile rotation", () => {
         runEmbeddedPiAgentInline({
           sessionId: TEST_SESSION_ID,
           sessionKey: "agent:test:user",
-          sessionFile: createTestSessionTranscriptLocator(),
+          transcriptLocator: createTestSessionTranscriptLocator(),
           workspaceDir,
           agentDir,
           config: makeConfig(),
@@ -1142,7 +1142,7 @@ describe("runEmbeddedPiAgent auth profile rotation", () => {
       await runEmbeddedPiAgentInline({
         sessionId: TEST_SESSION_ID,
         sessionKey: "agent:test:user-order-excluded",
-        sessionFile: createTestSessionTranscriptLocator(),
+        transcriptLocator: createTestSessionTranscriptLocator(),
         workspaceDir,
         agentDir,
         config: makeConfig(),
@@ -1171,7 +1171,7 @@ describe("runEmbeddedPiAgent auth profile rotation", () => {
       await runEmbeddedPiAgentInline({
         sessionId: TEST_SESSION_ID,
         sessionKey: "agent:test:user-auth-alias",
-        sessionFile: createTestSessionTranscriptLocator(),
+        transcriptLocator: createTestSessionTranscriptLocator(),
         workspaceDir,
         agentDir,
         config: makeConfig(),
@@ -1210,7 +1210,7 @@ describe("runEmbeddedPiAgent auth profile rotation", () => {
       await runEmbeddedPiAgentInline({
         sessionId: TEST_SESSION_ID,
         sessionKey: "agent:test:mismatch",
-        sessionFile: createTestSessionTranscriptLocator(),
+        transcriptLocator: createTestSessionTranscriptLocator(),
         workspaceDir,
         agentDir,
         config: makeConfig(),
@@ -1252,7 +1252,7 @@ describe("runEmbeddedPiAgent auth profile rotation", () => {
         runEmbeddedPiAgentInline({
           sessionId: TEST_SESSION_ID,
           sessionKey: "agent:test:cooldown-failover",
-          sessionFile: createTestSessionTranscriptLocator(),
+          transcriptLocator: createTestSessionTranscriptLocator(),
           workspaceDir,
           agentDir,
           config: makeConfig({ fallbacks: ["openai/mock-2"] }),
@@ -1296,7 +1296,7 @@ describe("runEmbeddedPiAgent auth profile rotation", () => {
       const result = await runEmbeddedPiAgentInline({
         sessionId: TEST_SESSION_ID,
         sessionKey: "agent:test:cooldown-probe",
-        sessionFile: createTestSessionTranscriptLocator(),
+        transcriptLocator: createTestSessionTranscriptLocator(),
         workspaceDir,
         agentDir,
         config: makeConfig({ fallbacks: ["openai/mock-2"] }),
@@ -1344,7 +1344,7 @@ describe("runEmbeddedPiAgent auth profile rotation", () => {
       const result = await runEmbeddedPiAgentInline({
         sessionId: TEST_SESSION_ID,
         sessionKey: "agent:test:overloaded-cooldown-probe",
-        sessionFile: createTestSessionTranscriptLocator(),
+        transcriptLocator: createTestSessionTranscriptLocator(),
         workspaceDir,
         agentDir,
         config: makeConfig({ fallbacks: ["openai/mock-2"] }),
@@ -1392,7 +1392,7 @@ describe("runEmbeddedPiAgent auth profile rotation", () => {
       const result = await runEmbeddedPiAgentInline({
         sessionId: TEST_SESSION_ID,
         sessionKey: "agent:test:billing-cooldown-probe-no-fallbacks",
-        sessionFile: createTestSessionTranscriptLocator(),
+        transcriptLocator: createTestSessionTranscriptLocator(),
         workspaceDir,
         agentDir,
         config: makeConfig(),
@@ -1423,7 +1423,7 @@ describe("runEmbeddedPiAgent auth profile rotation", () => {
         runEmbeddedPiAgentInline({
           sessionId: TEST_SESSION_ID,
           sessionKey: "agent:support:cooldown-failover",
-          sessionFile: createTestSessionTranscriptLocator(),
+          transcriptLocator: createTestSessionTranscriptLocator(),
           workspaceDir,
           agentDir,
           config: makeAgentOverrideOnlyFallbackConfig("support"),
@@ -1468,7 +1468,7 @@ describe("runEmbeddedPiAgent auth profile rotation", () => {
         runEmbeddedPiAgentInline({
           sessionId: TEST_SESSION_ID,
           sessionKey: "agent:test:disabled-failover",
-          sessionFile: createTestSessionTranscriptLocator(),
+          transcriptLocator: createTestSessionTranscriptLocator(),
           workspaceDir,
           agentDir,
           config: makeConfig({ fallbacks: ["openai/mock-2"] }),
@@ -1503,7 +1503,7 @@ describe("runEmbeddedPiAgent auth profile rotation", () => {
           runEmbeddedPiAgentInline({
             sessionId: TEST_SESSION_ID,
             sessionKey: "agent:test:auth-unavailable",
-            sessionFile: createTestSessionTranscriptLocator(),
+            transcriptLocator: createTestSessionTranscriptLocator(),
             workspaceDir,
             agentDir,
             config: makeConfig({ fallbacks: ["openai/mock-2"], apiKey: "" }),
@@ -1541,7 +1541,7 @@ describe("runEmbeddedPiAgent auth profile rotation", () => {
         await runEmbeddedPiAgentInline({
           sessionId: TEST_SESSION_ID,
           sessionKey: "agent:test:billing-failover-active-model",
-          sessionFile: createTestSessionTranscriptLocator(),
+          transcriptLocator: createTestSessionTranscriptLocator(),
           workspaceDir,
           agentDir,
           config: makeConfig({ fallbacks: ["openai/mock-2"] }),

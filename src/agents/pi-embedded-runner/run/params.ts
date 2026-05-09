@@ -121,7 +121,7 @@ export type RunEmbeddedPiAgentParams = {
   forceHeartbeatTool?: boolean;
   /** Allow runtime plugins for this run to late-bind the gateway subagent. */
   allowGatewaySubagentBinding?: boolean;
-  sessionFile: string;
+  transcriptLocator: string;
   workspaceDir: string;
   agentDir?: string;
   config?: OpenClawConfig;

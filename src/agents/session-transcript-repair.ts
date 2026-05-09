@@ -461,7 +461,7 @@ export function repairToolUseResultPairing(
   options?: ToolUseResultPairingOptions,
 ): ToolUseRepairReport {
   // Anthropic (and Cloud Code Assist) reject transcripts where assistant tool calls are not
-  // immediately followed by matching tool results. Session files can end up with results
+  // immediately followed by matching tool results. Transcript locators can end up with results
   // displaced (e.g. after user turns) or duplicated. Repair by:
   // - moving matching toolResult messages directly after their assistant toolCall turn
   // - inserting synthetic error toolResults for missing ids

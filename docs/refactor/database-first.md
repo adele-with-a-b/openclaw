@@ -5,7 +5,7 @@ read_when:
   - Moving OpenClaw runtime data, cache, transcripts, task state, or scratch files into SQLite
   - Designing doctor migrations from legacy JSON or JSONL files
   - Changing backup, restore, VFS, or worker storage behavior
-  - Removing session file locks, pruning, truncation, or JSON compatibility paths
+  - Removing session locks, pruning, truncation, or JSON compatibility paths
 ---
 
 # Database-First State Refactor
@@ -216,8 +216,8 @@ The remaining cleanup is mostly consolidation and deletion:
   directly through the SQLite transcript store and returns canonical SQLite
   locators instead of durable JSONL file paths.
 - Managed outgoing image retention keys its transcript-message cache from
-  SQLite transcript stats instead of `fs.stat(sessionFile)`.
-- Runtime session file locks and the standalone legacy `.jsonl.lock` doctor
+  SQLite transcript stats instead of filesystem stat calls.
+- Runtime session locks and the standalone legacy `.jsonl.lock` doctor
   lane have been removed.
 - The Microsoft Teams runtime barrel no longer re-exports the old plugin SDK
   file-lock helper; its durable state paths are SQLite-backed.
@@ -255,7 +255,7 @@ The remaining cleanup is mostly consolidation and deletion:
 - Starting a new persisted transcript session now always allocates a fresh
   SQLite locator. The session manager no longer reuses a previous file-era
   transcript path as the identity for the new session.
-- Plugin runtime no longer exposes `api.runtime.agent.session.resolveSessionFilePath`;
+- Plugin runtime no longer exposes `api.runtime.agent.session.resolveTranscriptLocatorPath`;
   plugin code either uses the SQLite row helpers or creates a
   `sqlite-transcript://...` locator through `session-store-runtime`.
 - The public `session-store-runtime` SDK surface no longer exports database

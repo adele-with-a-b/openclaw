@@ -316,7 +316,7 @@ async function loadArtifacts(
   const artifacts: ArtifactRecord[] = [];
   await visitSessionMessagesAsync(
     sessionId,
-    entry?.sessionFile,
+    entry?.transcriptLocator,
     (message, seq) => {
       collectArtifactsFromMessage({
         message,

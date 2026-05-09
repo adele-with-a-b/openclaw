@@ -66,23 +66,23 @@ function setHookRunnerForTest(hookRunner: unknown): void {
   globalStore[hookRunnerGlobalStateKey] = state;
 }
 
-function createSessionFile(params?: { history?: Array<{ role: "user"; content: string }> }) {
+function createTranscriptLocator(params?: { history?: Array<{ role: "user"; content: string }> }) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-cli-hooks-"));
   vi.stubEnv("OPENCLAW_STATE_DIR", dir);
-  const sessionFile = TEST_SESSION_FILE;
+  const transcriptLocator = TEST_SESSION_FILE;
   upsertSessionEntry({
     agentId: "main",
     sessionKey: TEST_SESSION_KEY,
     entry: {
       sessionId: TEST_SESSION_ID,
-      sessionFile,
+      transcriptLocator,
       updatedAt: Date.now(),
     },
   });
   replaceSqliteSessionTranscriptEvents({
     agentId: "main",
     sessionId: TEST_SESSION_ID,
-    transcriptPath: sessionFile,
+    transcriptPath: transcriptLocator,
     events: [
       {
         type: "session",
@@ -104,7 +104,7 @@ function createSessionFile(params?: { history?: Array<{ role: "user"; content: s
       })),
     ],
   });
-  return { dir, sessionFile };
+  return { dir, transcriptLocator };
 }
 
 function buildPreparedContext(params?: {
@@ -127,7 +127,7 @@ function buildPreparedContext(params?: {
     params: {
       sessionId: TEST_SESSION_ID,
       sessionKey: params?.sessionKey,
-      sessionFile: TEST_SESSION_FILE,
+      transcriptLocator: TEST_SESSION_FILE,
       workspaceDir: "/tmp",
       prompt: "hi",
       provider: "codex-cli",
@@ -315,7 +315,7 @@ describe("runCliAgent reliability", () => {
         noOutputTimedOut: false,
       }),
     );
-    const { dir, sessionFile } = createSessionFile({
+    const { dir, transcriptLocator } = createTranscriptLocator({
       history: [{ role: "user", content: "earlier context" }],
     });
 
@@ -334,7 +334,7 @@ describe("runCliAgent reliability", () => {
               cliSessionId: "thread-123",
             }).params,
             agentId: "main",
-            sessionFile,
+            transcriptLocator,
             workspaceDir: dir,
           },
         }),
@@ -545,7 +545,7 @@ describe("runCliAgent reliability", () => {
       runAgentEnd: vi.fn(async () => undefined),
     };
     setHookRunnerForTest(hookRunner);
-    const { dir, sessionFile } = createSessionFile();
+    const { dir, transcriptLocator } = createTranscriptLocator();
 
     supervisorSpawnMock.mockResolvedValueOnce(
       createManagedRun({
@@ -565,7 +565,7 @@ describe("runCliAgent reliability", () => {
         ...buildPreparedContext(),
         params: {
           ...buildPreparedContext().params,
-          sessionFile,
+          transcriptLocator,
           workspaceDir: dir,
           sessionKey: "agent:main:main",
           agentId: "main",
@@ -655,7 +655,7 @@ describe("runCliAgent reliability", () => {
       runAgentEnd: vi.fn(async () => undefined),
     };
     setHookRunnerForTest(hookRunner);
-    const { dir, sessionFile } = createSessionFile({
+    const { dir, transcriptLocator } = createTranscriptLocator({
       history: [{ role: "user", content: "earlier context" }],
     });
 
@@ -666,7 +666,7 @@ describe("runCliAgent reliability", () => {
           ...buildPreparedContext({ sessionKey: "agent:main:main", runId: "run-blocked-cli" })
             .params,
           agentId: "main",
-          sessionFile,
+          transcriptLocator,
           workspaceDir: dir,
           prompt: "secret prompt",
         },
@@ -826,7 +826,7 @@ describe("runCliAgent reliability", () => {
       runAgentEnd: vi.fn(async () => undefined),
     };
     setHookRunnerForTest(hookRunner);
-    const { dir, sessionFile } = createSessionFile({
+    const { dir, transcriptLocator } = createTranscriptLocator({
       history: Array.from({ length: MAX_CLI_SESSION_HISTORY_MESSAGES + 5 }, (_, index) => ({
         role: "user" as const,
         content: `history-${index}`,
@@ -873,7 +873,7 @@ describe("runCliAgent reliability", () => {
               cliSessionId: "thread-123",
             }).params,
             agentId: "main",
-            sessionFile,
+            transcriptLocator,
             workspaceDir: dir,
           },
         }),
@@ -935,7 +935,7 @@ describe("runCliAgent reliability", () => {
   });
 
   it("builds fresh-session history reseed prompts from hook-mutated prompts", async () => {
-    const { dir, sessionFile } = createSessionFile({
+    const { dir, transcriptLocator } = createTranscriptLocator({
       history: [{ role: "user", content: "earlier ask" }],
     });
     const existingEvents = loadSqliteSessionTranscriptEvents({
@@ -945,7 +945,7 @@ describe("runCliAgent reliability", () => {
     replaceSqliteSessionTranscriptEvents({
       agentId: "main",
       sessionId: "s1",
-      transcriptPath: sessionFile,
+      transcriptPath: transcriptLocator,
       events: [
         ...existingEvents,
         {
@@ -985,7 +985,7 @@ describe("runCliAgent reliability", () => {
     try {
       const context = await prepareCliRunContext({
         sessionId: "s1",
-        sessionFile,
+        transcriptLocator,
         workspaceDir: dir,
         config,
         prompt: "current ask",

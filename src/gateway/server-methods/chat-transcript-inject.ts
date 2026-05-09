@@ -123,7 +123,7 @@ export async function appendInjectedAssistantMessageToTranscript(params: {
     emitSessionTranscriptUpdate({
       agentId,
       ...(sessionId ? { sessionId } : {}),
-      sessionFile: params.transcriptPath,
+      transcriptLocator: params.transcriptPath,
       message: messageBody,
       messageId,
     });

@@ -32,15 +32,15 @@ describe("resolveSessionTranscriptCandidates", () => {
 });
 
 describe("resolveStableSessionEndTranscript", () => {
-  it("uses a generated sqlite locator instead of a legacy sessionFile value", () => {
+  it("uses a generated sqlite locator instead of a legacy transcriptLocator value", () => {
     expect(
       resolveStableSessionEndTranscript({
         sessionId: "s1",
-        sessionFile: path.join("/tmp", "s1.jsonl"),
+        transcriptLocator: path.join("/tmp", "s1.jsonl"),
         agentId: "main",
       }),
     ).toEqual({
-      sessionFile: createSqliteSessionTranscriptLocator({ agentId: "main", sessionId: "s1" }),
+      transcriptLocator: createSqliteSessionTranscriptLocator({ agentId: "main", sessionId: "s1" }),
     });
   });
 });

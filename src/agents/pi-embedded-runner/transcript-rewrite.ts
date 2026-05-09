@@ -365,14 +365,14 @@ export async function rewriteTranscriptEntriesInSqliteTranscript(params: {
     });
     if (result.changed) {
       await persistTranscriptStateMutation({
-        sessionFile: params.transcriptPath,
+        transcriptLocator: params.transcriptPath,
         state,
         appendedEntries: result.appendedEntries,
       });
       emitSessionTranscriptUpdate({
         ...(params.agentId ? { agentId: params.agentId } : {}),
         ...(params.sessionId ? { sessionId: params.sessionId } : {}),
-        sessionFile: params.transcriptPath,
+        transcriptLocator: params.transcriptPath,
         sessionKey: params.sessionKey,
       });
       log.info(

@@ -7,7 +7,7 @@ import type { SessionEntry } from "./types.js";
 
 type SessionLifecycleEntry = Pick<
   SessionEntry,
-  "sessionId" | "sessionFile" | "sessionStartedAt" | "lastInteractionAt" | "updatedAt"
+  "sessionId" | "transcriptLocator" | "sessionStartedAt" | "lastInteractionAt" | "updatedAt"
 >;
 
 function resolveTimestamp(value: number | undefined): number | undefined {
@@ -33,14 +33,14 @@ export function readSessionHeaderStartedAtMs(params: {
   if (!sessionId) {
     return undefined;
   }
-  const storedSessionFile = params.entry?.sessionFile?.trim();
-  const sessionFile = isSqliteSessionTranscriptLocator(storedSessionFile)
-    ? storedSessionFile
+  const storedTranscriptLocator = params.entry?.transcriptLocator?.trim();
+  const transcriptLocator = isSqliteSessionTranscriptLocator(storedTranscriptLocator)
+    ? storedTranscriptLocator
     : createSqliteSessionTranscriptLocator({ agentId: params.agentId, sessionId });
   const scope = resolveSqliteSessionTranscriptScope({
     agentId: params.agentId,
     sessionId,
-    transcriptPath: sessionFile,
+    transcriptPath: transcriptLocator,
   });
   if (!scope) {
     return undefined;

@@ -14,7 +14,7 @@ function createAgentRuntime(payloads: unknown[] = [{ text: "Speak this." }]) {
     {
       sessionId?: string;
       updatedAt?: number;
-      sessionFile?: string;
+      transcriptLocator?: string;
       spawnedBy?: string;
       forkedFromParent?: boolean;
       totalTokens?: number;
@@ -213,7 +213,7 @@ describe("realtime voice agent consult runtime", () => {
     const { runtime, runEmbeddedPiAgent, sessionStore } = createAgentRuntime();
     sessionStore["agent:main:main"] = {
       sessionId: "parent-session",
-      sessionFile: createSqliteSessionTranscriptLocator({
+      transcriptLocator: createSqliteSessionTranscriptLocator({
         agentId: "main",
         sessionId: "parent-session",
       }),
@@ -227,7 +227,7 @@ describe("realtime voice agent consult runtime", () => {
     }));
     const forkSessionFromParent = vi.fn(async () => ({
       sessionId: "forked-session",
-      sessionFile: "sqlite-transcript://main/forked-session.jsonl",
+      transcriptLocator: "sqlite-transcript://main/forked-session.jsonl",
     }));
     __setRealtimeVoiceAgentConsultDepsForTest({
       resolveParentForkDecision,
@@ -261,14 +261,14 @@ describe("realtime voice agent consult runtime", () => {
     });
     expect(sessionStore["agent:main:subagent:google-meet:meet-1"]).toMatchObject({
       sessionId: "forked-session",
-      sessionFile: "sqlite-transcript://main/forked-session.jsonl",
+      transcriptLocator: "sqlite-transcript://main/forked-session.jsonl",
       spawnedBy: "agent:main:main",
       forkedFromParent: true,
     });
     expect(runEmbeddedPiAgent).toHaveBeenCalledWith(
       expect.objectContaining({
         sessionId: "forked-session",
-        sessionFile: "sqlite-transcript://main/forked-session.jsonl",
+        transcriptLocator: "sqlite-transcript://main/forked-session.jsonl",
         spawnedBy: "agent:main:main",
       }),
     );

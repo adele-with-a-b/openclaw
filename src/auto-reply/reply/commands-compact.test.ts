@@ -157,7 +157,7 @@ describe("handleCompactCommand", () => {
     );
   });
 
-  it("uses the canonical session agent when resolving the compaction session file", async () => {
+  it("uses the canonical session agent when resolving the compaction transcript locator", async () => {
     vi.mocked(compactEmbeddedPiSession).mockResolvedValueOnce({
       ok: true,
       compacted: false,
@@ -187,7 +187,7 @@ describe("handleCompactCommand", () => {
     });
     expect(vi.mocked(compactEmbeddedPiSession)).toHaveBeenCalledWith(
       expect.objectContaining({
-        sessionFile: "sqlite-transcript://target/session-1.jsonl",
+        transcriptLocator: "sqlite-transcript://target/session-1.jsonl",
       }),
     );
   });

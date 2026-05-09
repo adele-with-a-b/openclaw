@@ -111,14 +111,14 @@ function createCliBackendConfig(
   } satisfies OpenClawConfig;
 }
 
-function createSessionFile() {
+function createTranscriptLocator() {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-cli-prepare-"));
   vi.stubEnv("OPENCLAW_STATE_DIR", dir);
-  const sessionFile = path.join(dir, "agents", "main", "sessions", "session-test.jsonl");
+  const transcriptLocator = path.join(dir, "agents", "main", "sessions", "session-test.jsonl");
   replaceSqliteSessionTranscriptEvents({
     agentId: "main",
     sessionId: "session-test",
-    transcriptPath: sessionFile,
+    transcriptPath: transcriptLocator,
     events: [
       {
         type: "session",
@@ -129,11 +129,11 @@ function createSessionFile() {
       },
     ],
   });
-  return { dir, sessionFile };
+  return { dir, transcriptLocator };
 }
 
 function appendTranscriptEntry(
-  sessionFile: string,
+  transcriptLocator: string,
   entry: {
     id: string;
     parentId: string | null;
@@ -148,7 +148,7 @@ function appendTranscriptEntry(
   replaceSqliteSessionTranscriptEvents({
     agentId: "main",
     sessionId: "session-test",
-    transcriptPath: sessionFile,
+    transcriptPath: transcriptLocator,
     events: [
       ...events,
       {
@@ -225,15 +225,15 @@ describe("shouldSkipLocalCliCredentialEpoch", () => {
   });
 
   it("applies prompt-build hook context to Claude-style CLI preparation", async () => {
-    const { dir, sessionFile } = createSessionFile();
+    const { dir, transcriptLocator } = createTranscriptLocator();
     try {
-      appendTranscriptEntry(sessionFile, {
+      appendTranscriptEntry(transcriptLocator, {
         id: "msg-1",
         parentId: null,
         timestamp: new Date(1).toISOString(),
         message: { role: "user", content: "earlier context", timestamp: 1 },
       });
-      appendTranscriptEntry(sessionFile, {
+      appendTranscriptEntry(transcriptLocator, {
         id: "msg-2",
         parentId: "msg-1",
         timestamp: new Date(2).toISOString(),
@@ -272,7 +272,7 @@ describe("shouldSkipLocalCliCredentialEpoch", () => {
         sessionKey: "agent:main:test",
         agentId: "main",
         trigger: "user",
-        sessionFile,
+        transcriptLocator,
         workspaceDir: dir,
         prompt: "latest ask",
         provider: "test-cli",
@@ -331,7 +331,7 @@ describe("shouldSkipLocalCliCredentialEpoch", () => {
   });
 
   it("marks inter-session prompts after CLI prompt-build hook context is applied", async () => {
-    const { dir, sessionFile } = createSessionFile();
+    const { dir, transcriptLocator } = createTranscriptLocator();
     try {
       const hookRunner = {
         hasHooks: vi.fn((hookName: string) => hookName === "before_prompt_build"),
@@ -347,7 +347,7 @@ describe("shouldSkipLocalCliCredentialEpoch", () => {
         sessionKey: "agent:main:test",
         agentId: "main",
         trigger: "user",
-        sessionFile,
+        transcriptLocator,
         workspaceDir: dir,
         prompt: "foreign reply text",
         inputProvenance: {
@@ -374,7 +374,7 @@ describe("shouldSkipLocalCliCredentialEpoch", () => {
   });
 
   it("applies agent_turn_prepare-only context on the CLI path", async () => {
-    const { dir, sessionFile } = createSessionFile();
+    const { dir, transcriptLocator } = createTranscriptLocator();
     try {
       const hookRunner = {
         hasHooks: vi.fn((hookName: string) => hookName === "agent_turn_prepare"),
@@ -392,7 +392,7 @@ describe("shouldSkipLocalCliCredentialEpoch", () => {
         sessionKey: "agent:main:test",
         agentId: "main",
         trigger: "user",
-        sessionFile,
+        transcriptLocator,
         workspaceDir: dir,
         prompt: "latest ask",
         provider: "test-cli",
@@ -422,7 +422,7 @@ describe("shouldSkipLocalCliCredentialEpoch", () => {
   });
 
   it("merges before_prompt_build and legacy before_agent_start hook context for CLI preparation", async () => {
-    const { dir, sessionFile } = createSessionFile();
+    const { dir, transcriptLocator } = createTranscriptLocator();
     try {
       const hookRunner = {
         hasHooks: vi.fn((_hookName: string) => true),
@@ -443,7 +443,7 @@ describe("shouldSkipLocalCliCredentialEpoch", () => {
 
       const context = await prepareCliRunContext({
         sessionId: "session-test",
-        sessionFile,
+        transcriptLocator,
         workspaceDir: dir,
         prompt: "latest ask",
         provider: "test-cli",
@@ -465,7 +465,7 @@ describe("shouldSkipLocalCliCredentialEpoch", () => {
   });
 
   it("preserves the base prompt when prompt-build hooks fail", async () => {
-    const { dir, sessionFile } = createSessionFile();
+    const { dir, transcriptLocator } = createTranscriptLocator();
     try {
       const hookRunner = {
         hasHooks: vi.fn((hookName: string) => hookName === "before_prompt_build"),
@@ -478,7 +478,7 @@ describe("shouldSkipLocalCliCredentialEpoch", () => {
 
       const context = await prepareCliRunContext({
         sessionId: "session-test",
-        sessionFile,
+        transcriptLocator,
         workspaceDir: dir,
         prompt: "latest ask",
         provider: "test-cli",
@@ -498,11 +498,11 @@ describe("shouldSkipLocalCliCredentialEpoch", () => {
   });
 
   it("uses explicit static prompt text for CLI session reuse hashing", async () => {
-    const { dir, sessionFile } = createSessionFile();
+    const { dir, transcriptLocator } = createTranscriptLocator();
     try {
       const context = await prepareCliRunContext({
         sessionId: "session-test",
-        sessionFile,
+        transcriptLocator,
         workspaceDir: dir,
         prompt: "latest ask",
         provider: "test-cli",
@@ -526,12 +526,12 @@ describe("shouldSkipLocalCliCredentialEpoch", () => {
   });
 
   it("ignores volatile prompt text when static prompt text matches", async () => {
-    const { dir, sessionFile } = createSessionFile();
+    const { dir, transcriptLocator } = createTranscriptLocator();
     try {
       const staticPrompt = "## Direct Context\nYou are in a Telegram direct conversation.";
       const context = await prepareCliRunContext({
         sessionId: "session-test",
-        sessionFile,
+        transcriptLocator,
         workspaceDir: dir,
         prompt: "latest ask",
         provider: "test-cli",
@@ -555,7 +555,7 @@ describe("shouldSkipLocalCliCredentialEpoch", () => {
   });
 
   it("applies direct-run prepend system context helpers on the CLI path", async () => {
-    const { dir, sessionFile } = createSessionFile();
+    const { dir, transcriptLocator } = createTranscriptLocator();
     try {
       mockBuildActiveVideoGenerationTaskPromptContextForSession.mockReturnValue(
         "active video task",
@@ -574,7 +574,7 @@ describe("shouldSkipLocalCliCredentialEpoch", () => {
         sessionId: "session-test",
         sessionKey: "agent:main:test",
         trigger: "user",
-        sessionFile,
+        transcriptLocator,
         workspaceDir: dir,
         prompt: "latest ask",
         provider: "test-cli",
@@ -594,7 +594,7 @@ describe("shouldSkipLocalCliCredentialEpoch", () => {
   });
 
   it("skips bundle MCP preparation when tools are disabled", async () => {
-    const { dir, sessionFile } = createSessionFile();
+    const { dir, transcriptLocator } = createTranscriptLocator();
     try {
       const getActiveMcpLoopbackRuntime = vi.fn(() => ({
         port: 31783,
@@ -611,7 +611,7 @@ describe("shouldSkipLocalCliCredentialEpoch", () => {
 
       const context = await prepareCliRunContext({
         sessionId: "session-test",
-        sessionFile,
+        transcriptLocator,
         workspaceDir: dir,
         prompt: "latest ask",
         provider: "test-cli",
@@ -634,7 +634,7 @@ describe("shouldSkipLocalCliCredentialEpoch", () => {
   });
 
   it("fails closed when a runtime toolsAllow is requested for CLI backends", async () => {
-    const { dir, sessionFile } = createSessionFile();
+    const { dir, transcriptLocator } = createTranscriptLocator();
     try {
       const getActiveMcpLoopbackRuntime = vi.fn(() => ({
         port: 31783,
@@ -648,7 +648,7 @@ describe("shouldSkipLocalCliCredentialEpoch", () => {
       await expect(
         prepareCliRunContext({
           sessionId: "session-test",
-          sessionFile,
+          transcriptLocator,
           workspaceDir: dir,
           prompt: "latest ask",
           provider: "test-cli",
@@ -669,7 +669,7 @@ describe("shouldSkipLocalCliCredentialEpoch", () => {
   });
 
   it("fails closed for native tool-capable CLI backends when tools are disabled", async () => {
-    const { dir, sessionFile } = createSessionFile();
+    const { dir, transcriptLocator } = createTranscriptLocator();
     try {
       const getActiveMcpLoopbackRuntime = vi.fn(() => ({
         port: 31783,
@@ -703,7 +703,7 @@ describe("shouldSkipLocalCliCredentialEpoch", () => {
       await expect(
         prepareCliRunContext({
           sessionId: "session-test",
-          sessionFile,
+          transcriptLocator,
           workspaceDir: dir,
           prompt: "latest ask",
           provider: "native-cli",
@@ -724,7 +724,7 @@ describe("shouldSkipLocalCliCredentialEpoch", () => {
   });
 
   it("drops the claude-cli sessionId when the on-disk transcript is missing (#77011)", async () => {
-    const { dir, sessionFile } = createSessionFile();
+    const { dir, transcriptLocator } = createTranscriptLocator();
     try {
       cliBackendsTesting.setDepsForTest({
         resolvePluginSetupCliBackend: () => undefined,
@@ -752,7 +752,7 @@ describe("shouldSkipLocalCliCredentialEpoch", () => {
       const context = await prepareCliRunContext({
         sessionId: "session-test",
         sessionKey: "agent:main:telegram:direct:peer",
-        sessionFile,
+        transcriptLocator,
         workspaceDir: dir,
         prompt: "follow-up",
         provider: "claude-cli",
@@ -772,7 +772,7 @@ describe("shouldSkipLocalCliCredentialEpoch", () => {
   });
 
   it("keeps the claude-cli sessionId when the on-disk transcript is present", async () => {
-    const { dir, sessionFile } = createSessionFile();
+    const { dir, transcriptLocator } = createTranscriptLocator();
     try {
       cliBackendsTesting.setDepsForTest({
         resolvePluginSetupCliBackend: () => undefined,
@@ -800,7 +800,7 @@ describe("shouldSkipLocalCliCredentialEpoch", () => {
       const context = await prepareCliRunContext({
         sessionId: "session-test",
         sessionKey: "agent:main:telegram:direct:peer",
-        sessionFile,
+        transcriptLocator,
         workspaceDir: dir,
         prompt: "follow-up",
         provider: "claude-cli",
@@ -820,7 +820,7 @@ describe("shouldSkipLocalCliCredentialEpoch", () => {
   });
 
   it("does not probe the transcript for non-claude-cli providers", async () => {
-    const { dir, sessionFile } = createSessionFile();
+    const { dir, transcriptLocator } = createTranscriptLocator();
     try {
       const transcriptCheck = vi.fn(async () => false);
       setCliRunnerPrepareTestDeps({
@@ -829,7 +829,7 @@ describe("shouldSkipLocalCliCredentialEpoch", () => {
 
       const context = await prepareCliRunContext({
         sessionId: "session-test",
-        sessionFile,
+        transcriptLocator,
         workspaceDir: dir,
         prompt: "latest ask",
         provider: "test-cli",

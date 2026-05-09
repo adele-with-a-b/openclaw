@@ -463,7 +463,7 @@ export abstract class MemoryManagerSyncOps {
       if (this.closed) {
         return;
       }
-      const sessionTranscript = update.sessionFile;
+      const sessionTranscript = update.transcriptLocator;
       const updateAgentId = update.agentId?.trim();
       if (updateAgentId && updateAgentId !== this.agentId) {
         return;

@@ -71,7 +71,7 @@ function emitCompactionSessionLifecycleHooks(params: {
   if (hookRunner.hasHooks("session_end")) {
     const transcript = resolveStableSessionEndTranscript({
       sessionId: params.previousEntry.sessionId,
-      sessionFile: params.previousEntry.sessionFile,
+      transcriptLocator: params.previousEntry.transcriptLocator,
       agentId: resolveAgentIdFromSessionKey(params.sessionKey),
     });
     const payload = buildSessionEndHookPayload({
@@ -79,7 +79,7 @@ function emitCompactionSessionLifecycleHooks(params: {
       sessionKey: params.sessionKey,
       cfg: params.cfg,
       reason: "compaction",
-      sessionFile: transcript.sessionFile,
+      transcriptLocator: transcript.transcriptLocator,
       nextSessionId: params.nextEntry.sessionId,
     });
     void hookRunner.runSessionEnd(payload.event, payload.context).catch((err) => {
@@ -232,8 +232,8 @@ export async function incrementCompactionCount(params: {
   tokensAfter?: number;
   /** Session id after compaction, when the runtime rotated transcripts. */
   newSessionId?: string;
-  /** Session file after compaction, when the runtime rotated transcripts. */
-  newSessionFile?: string;
+  /** Transcript locator after compaction, when the runtime rotated transcripts. */
+  newTranscriptLocator?: string;
 }): Promise<number | undefined> {
   const {
     sessionEntry,
@@ -244,7 +244,7 @@ export async function incrementCompactionCount(params: {
     amount = 1,
     tokensAfter,
     newSessionId,
-    newSessionFile,
+    newTranscriptLocator,
   } = params;
   if (!sessionStore || !sessionKey) {
     return undefined;
@@ -260,16 +260,16 @@ export async function incrementCompactionCount(params: {
     compactionCount: nextCount,
     updatedAt: now,
   };
-  const explicitNewSessionFile = normalizeOptionalString(newSessionFile);
+  const explicitNewTranscriptLocator = normalizeOptionalString(newTranscriptLocator);
   const sessionIdChanged = Boolean(newSessionId && newSessionId !== entry.sessionId);
-  const sessionFileChanged = Boolean(
-    explicitNewSessionFile && explicitNewSessionFile !== entry.sessionFile,
+  const transcriptLocatorChanged = Boolean(
+    explicitNewTranscriptLocator && explicitNewTranscriptLocator !== entry.transcriptLocator,
   );
   if (sessionIdChanged && newSessionId) {
     updates.sessionId = newSessionId;
-    updates.sessionFile =
-      explicitNewSessionFile ??
-      resolveCompactionSessionFile({
+    updates.transcriptLocator =
+      explicitNewTranscriptLocator ??
+      resolveCompactionTranscriptLocator({
         entry,
         sessionKey,
         cfg,
@@ -279,8 +279,8 @@ export async function incrementCompactionCount(params: {
     updates.usageFamilySessionIds = Array.from(
       new Set([...(entry.usageFamilySessionIds ?? []), entry.sessionId, newSessionId]),
     );
-  } else if (sessionFileChanged && explicitNewSessionFile) {
-    updates.sessionFile = explicitNewSessionFile;
+  } else if (transcriptLocatorChanged && explicitNewTranscriptLocator) {
+    updates.transcriptLocator = explicitNewTranscriptLocator;
   }
   // If tokensAfter is provided, update the cached token counts to reflect post-compaction state
   const tokensAfterCompaction = resolvePositiveTokenCount(tokensAfter);
@@ -309,7 +309,7 @@ export async function incrementCompactionCount(params: {
       }),
     });
   }
-  if ((sessionIdChanged || sessionFileChanged) && cfg) {
+  if ((sessionIdChanged || transcriptLocatorChanged) && cfg) {
     emitCompactionSessionLifecycleHooks({
       cfg,
       sessionKey,
@@ -320,7 +320,7 @@ export async function incrementCompactionCount(params: {
   return nextCount;
 }
 
-function resolveCompactionSessionFile(params: {
+function resolveCompactionTranscriptLocator(params: {
   entry: SessionEntry;
   sessionKey: string;
   cfg?: OpenClawConfig;
@@ -334,7 +334,7 @@ function resolveCompactionSessionFile(params: {
   return createSqliteSessionTranscriptLocator({
     agentId: agentId ?? DEFAULT_AGENT_ID,
     sessionId: params.newSessionId,
-    topicId: extractSqliteTranscriptTopicId(params.entry.sessionFile, params.entry.sessionId),
+    topicId: extractSqliteTranscriptTopicId(params.entry.transcriptLocator, params.entry.sessionId),
   });
 }
 

@@ -122,13 +122,13 @@ function compactionEntry(params: {
 }
 
 async function seedSession(entries: SessionEntry[]): Promise<{
-  sessionFile: string;
+  transcriptLocator: string;
   sessionId: string;
 }> {
   const dir = await makeTmpDir();
   vi.stubEnv("OPENCLAW_STATE_DIR", dir);
   const sessionId = `manual-compaction-${++sessionCounter}`;
-  const sessionFile = createSqliteSessionTranscriptLocator({ agentId: "main", sessionId });
+  const transcriptLocator = createSqliteSessionTranscriptLocator({ agentId: "main", sessionId });
   const header: SessionHeader = {
     type: "session",
     id: sessionId,
@@ -139,10 +139,10 @@ async function seedSession(entries: SessionEntry[]): Promise<{
   replaceSqliteSessionTranscriptEvents({
     agentId: "main",
     sessionId,
-    transcriptPath: sessionFile,
+    transcriptPath: transcriptLocator,
     events: [header, ...entries],
   });
-  return { sessionFile, sessionId };
+  return { transcriptLocator, sessionId };
 }
 
 function loadState(sessionId: string): TranscriptState {
@@ -164,7 +164,7 @@ function loadState(sessionId: string): TranscriptState {
 describe("hardenManualCompactionBoundary", () => {
   it("turns manual compaction into a true checkpoint for rebuilt context", async () => {
     const latestCompactionId = "compact-2";
-    const { sessionFile, sessionId } = await seedSession([
+    const { transcriptLocator, sessionId } = await seedSession([
       messageEntry({
         id: "user-1",
         parentId: null,
@@ -215,7 +215,7 @@ describe("hardenManualCompactionBoundary", () => {
       .messages.map((message) => messageText(message));
     expect(beforeTexts.join("\n")).toContain("detailed new answer");
 
-    const hardened = await hardenManualCompactionBoundary({ sessionFile });
+    const hardened = await hardenManualCompactionBoundary({ transcriptLocator });
     expect(hardened.applied).toBe(true);
     expect(hardened.firstKeptEntryId).toBe(latestCompactionId);
     expect(hardened.messages.map((message) => message.role)).toEqual(["compactionSummary"]);
@@ -231,7 +231,7 @@ describe("hardenManualCompactionBoundary", () => {
     replaceSqliteSessionTranscriptEvents({
       agentId: "main",
       sessionId,
-      transcriptPath: sessionFile,
+      transcriptPath: transcriptLocator,
       events: [
         reopened.getHeader()!,
         ...reopened.getEntries(),
@@ -255,7 +255,7 @@ describe("hardenManualCompactionBoundary", () => {
   it("keeps the upstream recent tail when requested", async () => {
     const keepId = "assistant-1";
     const latestCompactionId = "compact-1";
-    const { sessionFile, sessionId } = await seedSession([
+    const { transcriptLocator, sessionId } = await seedSession([
       messageEntry({
         id: "user-1",
         parentId: null,
@@ -279,7 +279,7 @@ describe("hardenManualCompactionBoundary", () => {
     ]);
 
     const hardened = await hardenManualCompactionBoundary({
-      sessionFile,
+      transcriptLocator,
       preserveRecentTail: true,
     });
     expect(hardened.applied).toBe(false);
@@ -300,7 +300,7 @@ describe("hardenManualCompactionBoundary", () => {
   });
 
   it("is a no-op when the latest leaf is not a compaction entry", async () => {
-    const { sessionFile } = await seedSession([
+    const { transcriptLocator } = await seedSession([
       messageEntry({
         id: "user-1",
         parentId: null,
@@ -315,7 +315,7 @@ describe("hardenManualCompactionBoundary", () => {
       }),
     ]);
 
-    const result = await hardenManualCompactionBoundary({ sessionFile });
+    const result = await hardenManualCompactionBoundary({ transcriptLocator });
     expect(result.applied).toBe(false);
     expect(result.messages.map((message) => message.role)).toEqual(["user", "assistant"]);
   });

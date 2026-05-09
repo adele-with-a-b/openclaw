@@ -153,7 +153,7 @@ describe("abort detection", () => {
         sessionKey: params.sessionKey,
         messageProvider: "telegram",
         agentAccountId: "acct",
-        sessionFile: path.join(params.root, "session.jsonl"),
+        transcriptLocator: path.join(params.root, "session.jsonl"),
         workspaceDir: path.join(params.root, "workspace"),
         config: params.cfg,
         provider: "anthropic",

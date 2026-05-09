@@ -251,16 +251,16 @@ function clampToBudget(content: string, budget: number): string {
 }
 
 export async function ensureSessionHeader(params: {
-  sessionFile: string;
+  transcriptLocator: string;
   sessionId: string;
   cwd: string;
   agentId?: string;
   env?: OpenClawStateDatabaseOptions["env"];
 }) {
-  const trimmedSessionFile = params.sessionFile.trim();
-  const transcriptPath = isSqliteSessionTranscriptLocator(trimmedSessionFile)
-    ? trimmedSessionFile
-    : path.resolve(trimmedSessionFile);
+  const trimmedTranscriptLocator = params.transcriptLocator.trim();
+  const transcriptPath = isSqliteSessionTranscriptLocator(trimmedTranscriptLocator)
+    ? trimmedTranscriptLocator
+    : path.resolve(trimmedTranscriptLocator);
   const existingScope = resolveSqliteSessionTranscriptScopeForPath({
     transcriptPath,
     env: params.env,

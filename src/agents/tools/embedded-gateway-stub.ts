@@ -51,7 +51,7 @@ interface EmbeddedGatewayRuntime {
   };
   readSessionMessagesAsync: (
     sessionId: string,
-    sessionFile: string | undefined,
+    transcriptLocator: string | undefined,
     opts: ReadSessionMessagesAsyncOptions,
   ) => Promise<unknown[]>;
   resolveSessionModelRef: (
@@ -119,7 +119,7 @@ async function handleChatHistory(params: Record<string, unknown>): Promise<{
   const maxHistoryBytes = rt.getMaxChatHistoryMessagesBytes();
 
   const localMessages = sessionId
-    ? await rt.readSessionMessagesAsync(sessionId, entry?.sessionFile as string | undefined, {
+    ? await rt.readSessionMessagesAsync(sessionId, entry?.transcriptLocator as string | undefined, {
         mode: "recent",
         maxMessages: max,
         maxBytes: Math.max(maxHistoryBytes * 2, 1024 * 1024),

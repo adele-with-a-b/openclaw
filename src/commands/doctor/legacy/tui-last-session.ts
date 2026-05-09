@@ -95,7 +95,7 @@ function writeTuiLastSessionRecordForDoctorImport(params: {
   }, sqliteOptionsForStateDir(params.stateDir));
 }
 
-export async function legacyTuiLastSessionFileExists(
+export async function legacyTuiLastTranscriptLocatorExists(
   params: {
     stateDir?: string;
   } = {},
@@ -114,7 +114,7 @@ export async function importLegacyTuiLastSessionStoreToSqlite(
   } = {},
 ): Promise<{ imported: boolean; pointers: number }> {
   const filePath = resolveLegacyTuiLastSessionStatePath(params.stateDir);
-  if (!(await legacyTuiLastSessionFileExists(params))) {
+  if (!(await legacyTuiLastTranscriptLocatorExists(params))) {
     return { imported: false, pointers: 0 };
   }
   const store = await readStore(filePath);

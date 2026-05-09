@@ -54,8 +54,8 @@ type SqliteTranscriptRecord = {
   updatedAt: number;
 };
 
-function normalizeTranscriptLocator(sessionFile: string): string {
-  const trimmed = sessionFile.trim();
+function normalizeTranscriptLocator(transcriptLocator: string): string {
+  const trimmed = transcriptLocator.trim();
   return isSqliteSessionTranscriptLocator(trimmed) ? trimmed : path.resolve(trimmed);
 }
 
@@ -105,14 +105,18 @@ function appendTranscriptEntryToSqlite(scope: TranscriptSqliteScope, entry: Sess
   });
 }
 
-function loadTranscriptState(params: { sessionFile: string; sessionId?: string; cwd?: string }): {
+function loadTranscriptState(params: {
+  transcriptLocator: string;
+  sessionId?: string;
+  cwd?: string;
+}): {
   state: TranscriptState;
   scope: TranscriptSqliteScope;
 } {
-  const sessionFile = params.sessionFile.trim();
-  const transcriptPath = isSqliteSessionTranscriptLocator(sessionFile)
-    ? sessionFile
-    : path.resolve(sessionFile);
+  const transcriptLocator = params.transcriptLocator.trim();
+  const transcriptPath = isSqliteSessionTranscriptLocator(transcriptLocator)
+    ? transcriptLocator
+    : path.resolve(transcriptLocator);
   const existingScope = resolveSqliteSessionTranscriptScopeForPath({ transcriptPath });
   if (!isSqliteSessionTranscriptLocator(transcriptPath) && !existingScope) {
     throw new Error(
@@ -280,18 +284,18 @@ function loadTranscriptStateForRecord(record: SqliteTranscriptRecord): Transcrip
 
 export class TranscriptSessionManager implements SessionManager {
   private state: TranscriptState;
-  private sessionFile: string | undefined;
+  private transcriptLocator: string | undefined;
   private persist: boolean;
   private sqliteScope: TranscriptSqliteScope | undefined;
 
   private constructor(params: {
     state: TranscriptState;
-    sessionFile?: string;
+    transcriptLocator?: string;
     persist: boolean;
     sqliteScope?: TranscriptSqliteScope;
   }) {
-    this.sessionFile = params.sessionFile
-      ? normalizeTranscriptLocator(params.sessionFile)
+    this.transcriptLocator = params.transcriptLocator
+      ? normalizeTranscriptLocator(params.transcriptLocator)
       : undefined;
     this.state = params.state;
     this.persist = params.persist;
@@ -299,18 +303,18 @@ export class TranscriptSessionManager implements SessionManager {
   }
 
   static open(params: {
-    sessionFile: string;
+    transcriptLocator: string;
     sessionId?: string;
     cwd?: string;
   }): TranscriptSessionManager {
-    const sessionFile = normalizeTranscriptLocator(params.sessionFile);
+    const transcriptLocator = normalizeTranscriptLocator(params.transcriptLocator);
     const loaded = loadTranscriptState({
-      sessionFile,
+      transcriptLocator,
       sessionId: params.sessionId,
       cwd: params.cwd,
     });
     return new TranscriptSessionManager({
-      sessionFile,
+      transcriptLocator,
       persist: true,
       state: loaded.state,
       sqliteScope: loaded.scope,
@@ -319,16 +323,16 @@ export class TranscriptSessionManager implements SessionManager {
 
   static create(cwd: string): TranscriptSessionManager {
     const header = createSessionHeader({ cwd });
-    const sessionFile = createTranscriptLocator(header);
+    const transcriptLocator = createTranscriptLocator(header);
     const sqliteScope = {
-      agentId: resolveAgentIdFromTranscriptLocator(sessionFile),
+      agentId: resolveAgentIdFromTranscriptLocator(transcriptLocator),
       sessionId: header.id,
-      transcriptPath: normalizeTranscriptLocator(sessionFile),
+      transcriptPath: normalizeTranscriptLocator(transcriptLocator),
     };
     const state = new TranscriptState({ header, entries: [] });
     persistFullTranscriptStateToSqlite(sqliteScope, state);
     return new TranscriptSessionManager({
-      sessionFile,
+      transcriptLocator,
       persist: true,
       state,
       sqliteScope,
@@ -350,7 +354,7 @@ export class TranscriptSessionManager implements SessionManager {
       return state.getCwd() === cwd;
     });
     if (newestSqlite) {
-      return TranscriptSessionManager.open({ sessionFile: newestSqlite.path, cwd });
+      return TranscriptSessionManager.open({ transcriptLocator: newestSqlite.path, cwd });
     }
     return TranscriptSessionManager.create(cwd);
   }
@@ -370,15 +374,15 @@ export class TranscriptSessionManager implements SessionManager {
       cwd: targetCwd,
       parentSession: sourceFile,
     });
-    const sessionFile = createTranscriptLocator(header, sourceScope.agentId);
+    const transcriptLocator = createTranscriptLocator(header, sourceScope.agentId);
     const state = new TranscriptState({ header, entries: sourceState.getEntries() });
     const sqliteScope = {
       agentId: sourceScope.agentId,
       sessionId: header.id,
-      transcriptPath: normalizeTranscriptLocator(sessionFile),
+      transcriptPath: normalizeTranscriptLocator(transcriptLocator),
     };
     persistFullTranscriptStateToSqlite(sqliteScope, state);
-    return TranscriptSessionManager.open({ sessionFile, cwd: targetCwd });
+    return TranscriptSessionManager.open({ transcriptLocator, cwd: targetCwd });
   }
 
   static async list(cwd: string, onProgress?: SessionListProgress): Promise<SessionInfo[]> {
@@ -403,11 +407,11 @@ export class TranscriptSessionManager implements SessionManager {
     return sessions.toSorted((a, b) => b.modified.getTime() - a.modified.getTime());
   }
 
-  setSessionFile(sessionFile: string): void {
-    this.sessionFile = normalizeTranscriptLocator(sessionFile);
+  setTranscriptLocator(transcriptLocator: string): void {
+    this.transcriptLocator = normalizeTranscriptLocator(transcriptLocator);
     this.persist = true;
     const loaded = loadTranscriptState({
-      sessionFile: this.sessionFile,
+      transcriptLocator: this.transcriptLocator,
       cwd: this.getCwd(),
     });
     this.state = loaded.state;
@@ -422,15 +426,15 @@ export class TranscriptSessionManager implements SessionManager {
     });
     this.state = new TranscriptState({ header, entries: [] });
     if (this.persist) {
-      this.sessionFile = createTranscriptLocator(header, this.sqliteScope?.agentId);
+      this.transcriptLocator = createTranscriptLocator(header, this.sqliteScope?.agentId);
       this.sqliteScope = {
-        agentId: resolveAgentIdFromTranscriptLocator(this.sessionFile),
+        agentId: resolveAgentIdFromTranscriptLocator(this.transcriptLocator),
         sessionId: header.id,
-        transcriptPath: normalizeTranscriptLocator(this.sessionFile),
+        transcriptPath: normalizeTranscriptLocator(this.transcriptLocator),
       };
       persistFullTranscriptStateToSqlite(this.sqliteScope, this.state);
     }
-    return this.sessionFile;
+    return this.transcriptLocator;
   }
 
   isPersisted(): boolean {
@@ -445,8 +449,8 @@ export class TranscriptSessionManager implements SessionManager {
     return this.state.getHeader()?.id ?? "";
   }
 
-  getSessionFile(): string | undefined {
-    return this.sessionFile;
+  getTranscriptLocator(): string | undefined {
+    return this.transcriptLocator;
   }
 
   appendMessage(message: Parameters<SessionManager["appendMessage"]>[0]): string {
@@ -553,7 +557,7 @@ export class TranscriptSessionManager implements SessionManager {
     options?: Parameters<SessionManager["removeTailEntries"]>[1],
   ): number {
     const removed = this.state.removeTailEntries(shouldRemove, options);
-    if (removed > 0 && this.persist && this.sessionFile && this.sqliteScope) {
+    if (removed > 0 && this.persist && this.transcriptLocator && this.sqliteScope) {
       persistFullTranscriptStateToSqlite(this.sqliteScope, this.state);
     }
     return removed;
@@ -577,9 +581,9 @@ export class TranscriptSessionManager implements SessionManager {
     }
     const header = createSessionHeader({
       cwd: this.getCwd(),
-      parentSession: this.sessionFile,
+      parentSession: this.transcriptLocator,
     });
-    const sessionFile = createSqliteSessionTranscriptLocator({
+    const transcriptLocator = createSqliteSessionTranscriptLocator({
       agentId: this.sqliteScope?.agentId ?? DEFAULT_AGENT_ID,
       sessionId: header.id,
     });
@@ -592,17 +596,17 @@ export class TranscriptSessionManager implements SessionManager {
     });
     persistFullTranscriptStateToSqlite(
       {
-        agentId: resolveAgentIdFromTranscriptLocator(sessionFile),
+        agentId: resolveAgentIdFromTranscriptLocator(transcriptLocator),
         sessionId: header.id,
-        transcriptPath: normalizeTranscriptLocator(sessionFile),
+        transcriptPath: normalizeTranscriptLocator(transcriptLocator),
       },
       state,
     );
-    return sessionFile;
+    return transcriptLocator;
   }
 
   private persistAppendedEntry(entry: SessionEntry): string {
-    if (!this.persist || !this.sessionFile || !this.sqliteScope) {
+    if (!this.persist || !this.transcriptLocator || !this.sqliteScope) {
       return entry.id;
     }
     if (this.state.migrated) {
@@ -615,7 +619,7 @@ export class TranscriptSessionManager implements SessionManager {
 }
 
 export function openTranscriptSessionManager(params: {
-  sessionFile: string;
+  transcriptLocator: string;
   sessionId?: string;
   cwd?: string;
 }): SessionManager {
@@ -624,9 +628,9 @@ export function openTranscriptSessionManager(params: {
 
 export const SessionManagerValue = {
   create: (cwd: string) => TranscriptSessionManager.create(cwd),
-  open: (sessionFile: string, cwdOverride?: string) => {
+  open: (transcriptLocator: string, cwdOverride?: string) => {
     return TranscriptSessionManager.open({
-      sessionFile,
+      transcriptLocator,
       cwd: cwdOverride,
     });
   },

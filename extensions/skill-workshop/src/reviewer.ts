@@ -248,7 +248,7 @@ export async function reviewTranscriptForProposal(params: {
     api: params.api,
     agentId: params.ctx.agentId,
   });
-  const sessionFile = createSqliteSessionTranscriptLocator({
+  const transcriptLocator = createSqliteSessionTranscriptLocator({
     agentId: params.ctx.agentId,
     sessionId,
   });
@@ -258,7 +258,7 @@ export async function reviewTranscriptForProposal(params: {
     agentId: params.ctx.agentId,
     messageProvider: params.ctx.messageProvider,
     messageChannel: params.ctx.channelId,
-    sessionFile,
+    transcriptLocator,
     workspaceDir: params.ctx.workspaceDir,
     agentDir: params.api.runtime.agent.resolveAgentDir(params.api.config, params.ctx.agentId),
     config: params.api.config,

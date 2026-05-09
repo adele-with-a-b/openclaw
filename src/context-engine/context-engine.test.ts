@@ -146,7 +146,7 @@ class MockContextEngine implements ContextEngine {
   async compact(_params: {
     sessionId: string;
     sessionKey?: string;
-    sessionFile: string;
+    transcriptLocator: string;
     tokenBudget?: number;
     compactionTarget?: "budget" | "threshold";
     customInstructions?: string;
@@ -222,7 +222,7 @@ class LegacySessionKeyStrictEngine implements ContextEngine {
   async compact(params: {
     sessionId: string;
     sessionKey?: string;
-    sessionFile: string;
+    transcriptLocator: string;
     tokenBudget?: number;
     compactionTarget?: "budget" | "threshold";
     customInstructions?: string;
@@ -243,7 +243,7 @@ class LegacySessionKeyStrictEngine implements ContextEngine {
   async maintain(params: {
     sessionId: string;
     sessionKey?: string;
-    sessionFile: string;
+    transcriptLocator: string;
     runtimeContext?: Record<string, unknown>;
   }): Promise<ContextEngineMaintenanceResult> {
     this.maintainCalls.push({ ...params });
@@ -291,7 +291,7 @@ class SessionKeyRuntimeErrorEngine implements ContextEngine {
   async compact(_params: {
     sessionId: string;
     sessionKey?: string;
-    sessionFile: string;
+    transcriptLocator: string;
     tokenBudget?: number;
     compactionTarget?: "budget" | "threshold";
     customInstructions?: string;
@@ -349,7 +349,7 @@ class LegacyAssembleStrictEngine implements ContextEngine {
   async compact(_params: {
     sessionId: string;
     sessionKey?: string;
-    sessionFile: string;
+    transcriptLocator: string;
     tokenBudget?: number;
     compactionTarget?: "budget" | "threshold";
     customInstructions?: string;
@@ -391,7 +391,7 @@ describe("Engine contract tests", () => {
 
     await engine.compact({
       sessionId: "s1",
-      sessionFile: "/tmp/session.json",
+      transcriptLocator: "/tmp/session.json",
       runtimeContext: {
         workspaceDir: "/tmp/workspace",
         currentTokenCount: 277403,
@@ -409,7 +409,7 @@ describe("Engine contract tests", () => {
     const compactRuntimeSpy = installCompactRuntimeSpy();
     const result = await delegateCompactionToRuntime({
       sessionId: "s2",
-      sessionFile: "/tmp/session.json",
+      transcriptLocator: "/tmp/session.json",
       tokenBudget: 4096,
       runtimeContext: {
         workspaceDir: "/tmp/workspace",
@@ -420,7 +420,7 @@ describe("Engine contract tests", () => {
     expect(compactRuntimeSpy).toHaveBeenCalledWith(
       expect.objectContaining({
         sessionId: "s2",
-        sessionFile: "/tmp/session.json",
+        transcriptLocator: "/tmp/session.json",
         tokenBudget: 4096,
         currentTokenCount: 12345,
         workspaceDir: "/tmp/workspace",
@@ -593,7 +593,7 @@ describe("Legacy sessionKey compatibility", () => {
     const compacted = await engine.compact({
       sessionId: "s1",
       sessionKey: "agent:main:test",
-      sessionFile: "/tmp/session.json",
+      transcriptLocator: "/tmp/session.json",
     });
 
     expect(firstAssembled.estimatedTokens).toBe(7);
@@ -642,7 +642,7 @@ describe("Legacy sessionKey compatibility", () => {
     await engine.maintain?.({
       sessionId: "s1",
       sessionKey: "agent:main:test",
-      sessionFile: "/tmp/session.json",
+      transcriptLocator: "/tmp/session.json",
     });
 
     expect(strictEngine.maintainCalls).toHaveLength(2);

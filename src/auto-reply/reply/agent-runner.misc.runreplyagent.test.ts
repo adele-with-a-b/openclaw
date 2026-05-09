@@ -287,7 +287,7 @@ describe("runReplyAgent auto-compaction token update", () => {
   function createBaseRun(params: {
     sessionEntry: Record<string, unknown>;
     config?: Record<string, unknown>;
-    sessionFile?: string;
+    transcriptLocator?: string;
     workspaceDir?: string;
   }) {
     const typing = createMockTypingController();
@@ -308,7 +308,7 @@ describe("runReplyAgent auto-compaction token update", () => {
         sessionId: "session",
         sessionKey: "main",
         messageProvider: "whatsapp",
-        sessionFile: params.sessionFile ?? "/tmp/session.jsonl",
+        transcriptLocator: params.transcriptLocator ?? "/tmp/session.jsonl",
         workspaceDir: params.workspaceDir ?? "/tmp",
         config: params.config ?? {},
         skillsSnapshot: {},
@@ -545,7 +545,7 @@ describe("runReplyAgent block streaming", () => {
         sessionId: "session",
         sessionKey: "main",
         messageProvider: "discord",
-        sessionFile: createTestTranscriptLocator(),
+        transcriptLocator: createTestTranscriptLocator(),
         workspaceDir: "/tmp",
         config: {
           agents: {
@@ -648,7 +648,7 @@ describe("runReplyAgent block streaming", () => {
         sessionId: "session",
         sessionKey: "main",
         messageProvider: "discord",
-        sessionFile: createTestTranscriptLocator(),
+        transcriptLocator: createTestTranscriptLocator(),
         workspaceDir: "/tmp",
         config: {
           agents: {
@@ -763,7 +763,7 @@ describe("runReplyAgent Active Memory inline debug", () => {
         sessionId: "session",
         sessionKey,
         messageProvider: "telegram",
-        sessionFile: createTestTranscriptLocator(),
+        transcriptLocator: createTestTranscriptLocator(),
         workspaceDir: "/tmp",
         config: {},
         skillsSnapshot: {},
@@ -864,7 +864,7 @@ describe("runReplyAgent Active Memory inline debug", () => {
         sessionId: "session",
         sessionKey,
         messageProvider: "telegram",
-        sessionFile: createTestTranscriptLocator(),
+        transcriptLocator: createTestTranscriptLocator(),
         workspaceDir: "/tmp",
         config: {},
         skillsSnapshot: {},
@@ -964,7 +964,7 @@ describe("runReplyAgent Active Memory inline debug", () => {
         sessionId: "session",
         sessionKey,
         messageProvider: "telegram",
-        sessionFile: createTestTranscriptLocator(),
+        transcriptLocator: createTestTranscriptLocator(),
         workspaceDir: "/tmp",
         config: {},
         skillsSnapshot: {},
@@ -1017,7 +1017,7 @@ describe("runReplyAgent Active Memory inline debug", () => {
   it("appends raw trace payloads when trace raw is enabled", async () => {
     const tmp = await createTestStateDir("openclaw-trace-raw-usage-");
     const sessionRowsTarget = resolveTestSessionRowsTarget(tmp);
-    const sessionFile = createTestTranscriptLocator("session", sessionRowsTarget.agentId);
+    const transcriptLocator = createTestTranscriptLocator("session", sessionRowsTarget.agentId);
     const sessionKey = "main";
     const sessionEntry: SessionEntry = {
       sessionId: "session",
@@ -1027,7 +1027,7 @@ describe("runReplyAgent Active Memory inline debug", () => {
     };
 
     await replaceTestSessionRows(sessionRowsTarget, { [sessionKey]: sessionEntry });
-    seedTestTranscript(sessionFile, [
+    seedTestTranscript(transcriptLocator, [
       {
         message: {
           role: "user",
@@ -1115,7 +1115,7 @@ describe("runReplyAgent Active Memory inline debug", () => {
         sessionId: "session",
         sessionKey,
         messageProvider: "telegram",
-        sessionFile,
+        transcriptLocator,
         workspaceDir: "/tmp",
         config: {},
         skillsSnapshot: {},
@@ -1241,7 +1241,7 @@ describe("runReplyAgent Active Memory inline debug", () => {
   it("does not emit persisted trace output to an unauthorized sender", async () => {
     const tmp = await createTestStateDir("openclaw-trace-raw-unauthorized-");
     const sessionRowsTarget = resolveTestSessionRowsTarget(tmp);
-    const sessionFile = createTestTranscriptLocator("session", sessionRowsTarget.agentId);
+    const transcriptLocator = createTestTranscriptLocator("session", sessionRowsTarget.agentId);
     const sessionKey = "main";
     const sessionEntry: SessionEntry = {
       sessionId: "session",
@@ -1250,7 +1250,7 @@ describe("runReplyAgent Active Memory inline debug", () => {
     };
 
     await replaceTestSessionRows(sessionRowsTarget, { [sessionKey]: sessionEntry });
-    seedTestTranscript(sessionFile);
+    seedTestTranscript(transcriptLocator);
 
     runEmbeddedPiAgentMock.mockResolvedValueOnce({
       payloads: [{ text: "Visible reply" }],
@@ -1285,7 +1285,7 @@ describe("runReplyAgent Active Memory inline debug", () => {
         sessionId: "session",
         sessionKey,
         messageProvider: "telegram",
-        sessionFile,
+        transcriptLocator,
         workspaceDir: "/tmp",
         config: {},
         skillsSnapshot: {},
@@ -1336,7 +1336,7 @@ describe("runReplyAgent Active Memory inline debug", () => {
   it("shows session and last-turn usage totals without per-call usage blocks", async () => {
     const tmp = await createTestStateDir("openclaw-trace-raw-usage-");
     const sessionRowsTarget = resolveTestSessionRowsTarget(tmp);
-    const sessionFile = createTestTranscriptLocator("session", sessionRowsTarget.agentId);
+    const transcriptLocator = createTestTranscriptLocator("session", sessionRowsTarget.agentId);
     const sessionKey = "main";
     const sessionEntry: SessionEntry = {
       sessionId: "session",
@@ -1345,7 +1345,7 @@ describe("runReplyAgent Active Memory inline debug", () => {
     };
 
     await replaceTestSessionRows(sessionRowsTarget, { [sessionKey]: sessionEntry });
-    seedTestTranscript(sessionFile, [
+    seedTestTranscript(transcriptLocator, [
       {
         message: {
           role: "assistant",
@@ -1389,7 +1389,7 @@ describe("runReplyAgent Active Memory inline debug", () => {
         sessionId: "session",
         sessionKey,
         messageProvider: "telegram",
-        sessionFile,
+        transcriptLocator,
         workspaceDir: "/tmp",
         config: {},
         skillsSnapshot: {},
@@ -1443,7 +1443,7 @@ describe("runReplyAgent Active Memory inline debug", () => {
   it("escapes markdown fence delimiters inside raw trace blocks", async () => {
     const tmp = await createTestStateDir("openclaw-trace-raw-fence-");
     const sessionRowsTarget = resolveTestSessionRowsTarget(tmp);
-    const sessionFile = createTestTranscriptLocator("session", sessionRowsTarget.agentId);
+    const transcriptLocator = createTestTranscriptLocator("session", sessionRowsTarget.agentId);
     const sessionKey = "main";
     const sessionEntry: SessionEntry = {
       sessionId: "session",
@@ -1452,7 +1452,7 @@ describe("runReplyAgent Active Memory inline debug", () => {
     };
 
     await replaceTestSessionRows(sessionRowsTarget, { [sessionKey]: sessionEntry });
-    seedTestTranscript(sessionFile);
+    seedTestTranscript(transcriptLocator);
 
     runEmbeddedPiAgentMock.mockResolvedValueOnce({
       payloads: [{ text: "Visible reply" }],
@@ -1487,7 +1487,7 @@ describe("runReplyAgent Active Memory inline debug", () => {
         sessionId: "session",
         sessionKey,
         messageProvider: "telegram",
-        sessionFile,
+        transcriptLocator,
         workspaceDir: "/tmp",
         config: {},
         skillsSnapshot: {},
@@ -1569,7 +1569,7 @@ describe("runReplyAgent Active Memory inline debug", () => {
         sessionId: "session",
         sessionKey,
         messageProvider: "telegram",
-        sessionFile: createTestTranscriptLocator(),
+        transcriptLocator: createTestTranscriptLocator(),
         workspaceDir: "/tmp",
         config: {},
         skillsSnapshot: {},
@@ -1633,7 +1633,7 @@ describe("runReplyAgent claude-cli routing", () => {
         sessionId: "session",
         sessionKey: "main",
         messageProvider: "webchat",
-        sessionFile: createTestTranscriptLocator(),
+        transcriptLocator: createTestTranscriptLocator(),
         workspaceDir: "/tmp",
         config: { agents: { defaults: { cliBackends: { "claude-cli": {} } } } },
         skillsSnapshot: {},
@@ -1738,7 +1738,7 @@ describe("runReplyAgent claude-cli routing", () => {
         sessionId: "session",
         sessionKey: "main",
         messageProvider: "webchat",
-        sessionFile: createTestTranscriptLocator(),
+        transcriptLocator: createTestTranscriptLocator(),
         workspaceDir: "/tmp",
         config: createCliBackendTestConfig(),
         skillsSnapshot: {},
@@ -1820,7 +1820,7 @@ describe("runReplyAgent claude-cli routing", () => {
         sessionId: "session",
         sessionKey: "main",
         messageProvider: "webchat",
-        sessionFile: createTestTranscriptLocator(),
+        transcriptLocator: createTestTranscriptLocator(),
         workspaceDir: "/tmp",
         config: {
           agents: {
@@ -1895,7 +1895,7 @@ describe("runReplyAgent messaging tool dedupe", () => {
         sessionId: "session",
         sessionKey,
         messageProvider,
-        sessionFile: createTestTranscriptLocator(),
+        transcriptLocator: createTestTranscriptLocator(),
         workspaceDir: "/tmp",
         config: createCliBackendTestConfig(),
         skillsSnapshot: {},
@@ -2028,7 +2028,7 @@ describe("runReplyAgent reminder commitment guard", () => {
         sessionId: "session",
         sessionKey: "main",
         messageProvider: "telegram",
-        sessionFile: createTestTranscriptLocator(),
+        transcriptLocator: createTestTranscriptLocator(),
         workspaceDir: "/tmp",
         config: createCliBackendTestConfig(),
         skillsSnapshot: {},
@@ -2249,7 +2249,7 @@ describe("runReplyAgent fallback reasoning tags", () => {
         sessionId: "session",
         sessionKey,
         messageProvider: "whatsapp",
-        sessionFile: createTestTranscriptLocator(),
+        transcriptLocator: createTestTranscriptLocator(),
         workspaceDir: "/tmp",
         config: createCliBackendTestConfig(),
         skillsSnapshot: {},
@@ -2378,7 +2378,7 @@ describe("runReplyAgent response usage footer", () => {
         sessionId: "session",
         sessionKey: params.sessionKey,
         messageProvider: "whatsapp",
-        sessionFile: createTestTranscriptLocator(),
+        transcriptLocator: createTestTranscriptLocator(),
         workspaceDir: "/tmp",
         config: createCliBackendTestConfig(),
         skillsSnapshot: {},
@@ -2491,7 +2491,7 @@ describe("runReplyAgent transient HTTP retry", () => {
         sessionId: "session",
         sessionKey: "main",
         messageProvider: "telegram",
-        sessionFile: createTestTranscriptLocator(),
+        transcriptLocator: createTestTranscriptLocator(),
         workspaceDir: "/tmp",
         config: createCliBackendTestConfig(),
         skillsSnapshot: {},
@@ -2567,7 +2567,7 @@ describe("runReplyAgent billing error classification", () => {
         sessionId: "session",
         sessionKey: "main",
         messageProvider: "telegram",
-        sessionFile: createTestTranscriptLocator(),
+        transcriptLocator: createTestTranscriptLocator(),
         workspaceDir: "/tmp",
         config: createCliBackendTestConfig(),
         skillsSnapshot: {},
@@ -2628,7 +2628,7 @@ describe("runReplyAgent mid-turn rate-limit fallback", () => {
         sessionId: "session",
         sessionKey: "main",
         messageProvider: "telegram",
-        sessionFile: createTestTranscriptLocator(),
+        transcriptLocator: createTestTranscriptLocator(),
         workspaceDir: "/tmp",
         config: createCliBackendTestConfig(),
         skillsSnapshot: {},

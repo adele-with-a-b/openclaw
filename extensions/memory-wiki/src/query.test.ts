@@ -123,12 +123,12 @@ function mockSessionTranscriptStore() {
       "agent:main:child-session": {
         sessionId: "child-session",
         updatedAt: 1,
-        sessionFile: "/tmp/openclaw/child-session.jsonl",
+        transcriptLocator: "/tmp/openclaw/child-session.jsonl",
       },
       "agent:main:sibling-session": {
         sessionId: "sibling-session",
         updatedAt: 2,
-        sessionFile: "/tmp/openclaw/sibling-session.jsonl",
+        transcriptLocator: "/tmp/openclaw/sibling-session.jsonl",
       },
     },
   });

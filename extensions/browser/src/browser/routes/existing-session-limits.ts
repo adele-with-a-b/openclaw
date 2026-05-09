@@ -25,9 +25,9 @@ export const EXISTING_SESSION_LIMITS = {
   },
   hooks: {
     uploadElement:
-      "existing-session file uploads do not support element selectors; use ref/inputRef.",
-    uploadSingleFile: "existing-session file uploads currently support one file at a time.",
-    uploadRefRequired: "existing-session file uploads require ref or inputRef.",
+      "existing-transcript locator uploads do not support element selectors; use ref/inputRef.",
+    uploadSingleFile: "existing-transcript locator uploads currently support one file at a time.",
+    uploadRefRequired: "existing-transcript locator uploads require ref or inputRef.",
     dialogTimeout: "existing-session dialog handling does not support timeoutMs.",
   },
   download: {

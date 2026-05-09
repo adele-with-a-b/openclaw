@@ -257,14 +257,14 @@ export function createLlmTaskTool(api: OpenClawPluginApi) {
       const fullPrompt = `${system}\n\nTASK:\n${prompt}\n\nINPUT_JSON:\n${inputJson}\n`;
 
       const sessionId = `llm-task-${randomUUID()}`;
-      const sessionFile = createSqliteSessionTranscriptLocator({
+      const transcriptLocator = createSqliteSessionTranscriptLocator({
         agentId: api.config ? resolveDefaultAgentId(api.config) : undefined,
         sessionId,
       });
 
       const result = await api.runtime.agent.runEmbeddedPiAgent({
         sessionId,
-        sessionFile,
+        transcriptLocator,
         workspaceDir: api.config?.agents?.defaults?.workspace ?? process.cwd(),
         config: api.config,
         prompt: fullPrompt,

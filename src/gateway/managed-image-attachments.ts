@@ -692,7 +692,7 @@ async function getSessionManagedOutgoingAttachmentIndex(
     sessionManagedOutgoingAttachmentIndexCache.delete(sessionKey);
   }
 
-  const messages = await readSessionMessagesAsync(sessionId, entry.sessionFile, {
+  const messages = await readSessionMessagesAsync(sessionId, entry.transcriptLocator, {
     agentId,
     mode: "full",
     reason: "managed outgoing attachment index",

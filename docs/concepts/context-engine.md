@@ -210,7 +210,7 @@ Required members:
 </ParamField>
 
 `compact` returns a `CompactResult`. When compaction rotates the active
-transcript, `result.sessionId` and `result.sessionFile` identify the successor
+transcript, `result.sessionId` and `result.transcriptLocator` identify the successor
 session that the next retry or turn must use.
 
 Optional members:

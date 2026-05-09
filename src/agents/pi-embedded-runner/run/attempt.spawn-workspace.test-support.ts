@@ -957,14 +957,14 @@ export async function createContextEngineAttemptRunner(params: {
     bootstrap?: (params: {
       sessionId: string;
       sessionKey?: string;
-      sessionFile: string;
+      transcriptLocator: string;
     }) => Promise<BootstrapResult>;
     maintain?:
       | boolean
       | ((params: {
           sessionId: string;
           sessionKey?: string;
-          sessionFile: string;
+          transcriptLocator: string;
           runtimeContext?: Record<string, unknown>;
         }) => Promise<{
           changed: boolean;
@@ -982,7 +982,7 @@ export async function createContextEngineAttemptRunner(params: {
     afterTurn?: (params: {
       sessionId: string;
       sessionKey?: string;
-      sessionFile: string;
+      transcriptLocator: string;
       messages: AgentMessage[];
       prePromptMessageCount: number;
       tokenBudget?: number;
@@ -1001,7 +1001,7 @@ export async function createContextEngineAttemptRunner(params: {
     compact?: (params: {
       sessionId: string;
       sessionKey?: string;
-      sessionFile: string;
+      transcriptLocator: string;
       tokenBudget?: number;
     }) => Promise<CompactResult>;
     info?: Partial<ContextEngineInfo>;
@@ -1018,7 +1018,7 @@ export async function createContextEngineAttemptRunner(params: {
   const agentDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-ctx-engine-agent-"));
   const stateDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-ctx-engine-state-"));
   const sessionId = "embedded-session";
-  const sessionFile = createSqliteSessionTranscriptLocator({
+  const transcriptLocator = createSqliteSessionTranscriptLocator({
     agentId: resolveAgentIdFromSessionKey(params.sessionKey) ?? DEFAULT_AGENT_ID,
     sessionId,
   });
@@ -1063,7 +1063,7 @@ export async function createContextEngineAttemptRunner(params: {
     )({
       sessionId,
       sessionKey: params.sessionKey,
-      sessionFile,
+      transcriptLocator,
       workspaceDir,
       agentDir,
       config: {},

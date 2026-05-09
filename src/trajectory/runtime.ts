@@ -18,7 +18,7 @@ export {
   resolveTrajectoryFilePath,
   resolveTrajectoryPointerFilePath,
   resolveTrajectoryPointerOpenFlags,
-  safeTrajectorySessionFileName,
+  safeTrajectoryTranscriptLocatorName,
 } from "./paths.js";
 
 type TrajectoryRuntimeInit = {
@@ -28,7 +28,7 @@ type TrajectoryRuntimeInit = {
   runId?: string;
   sessionId: string;
   sessionKey?: string;
-  sessionFile?: string;
+  transcriptLocator?: string;
   provider?: string;
   modelId?: string;
   modelApi?: string | null;
