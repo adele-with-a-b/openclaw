@@ -8,6 +8,7 @@ import {
 } from "../agents/agent-bundle-mcp-manager-api.js";
 import type { SessionMcpRuntime } from "../agents/agent-bundle-mcp-types.js";
 import { resolveAgentDir, resolveAgentWorkspaceDir } from "../agents/agent-scope.js";
+import { resolveMcpToolOverridesForAgent } from "../agents/mcp-agent-scope.js";
 import {
   fetchMcpAppView,
   getMcpAppViewLease,
@@ -280,6 +281,10 @@ async function reconstructMcpAppView(params: {
     workspaceDir: resolveAgentWorkspaceDir(params.cfg, agentId),
     agentDir: resolveAgentDir(params.cfg, agentId),
     cfg: params.cfg,
+    // An app view restores tools for one agent's transcript; a server scoped to
+    // other agents must stay unreachable here too, and an unresolved agent id
+    // fails closed rather than reopening the scoped server.
+    toolOverrides: resolveMcpToolOverridesForAgent(params.cfg, { agentId }),
   });
   const { runtime } = acquisition;
   try {

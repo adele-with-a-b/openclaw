@@ -8,6 +8,7 @@ import {
 } from "../../agent-bundle-mcp-tools.js";
 import { wrapToolWithAbortSignal } from "../../agent-tools.abort.js";
 import { filterLocalModelLeanTools } from "../../local-model-lean.js";
+import { resolveMcpToolOverridesForAgent } from "../../mcp-agent-scope.js";
 import { recordAgentCleanupFailure } from "../../run-cleanup-timeout.js";
 import { normalizeAgentRuntimeTools } from "../../runtime-plan/tools.js";
 import { createRuntimeToolMatcher } from "../../tool-policy-match.js";
@@ -97,7 +98,13 @@ export async function prepareEmbeddedAttemptBundleTools(params: {
     workspaceDir: params.setup.effectiveWorkspace,
     cfg: params.attempt.config,
     manifestRegistry: bundleManifestRegistry,
-    toolOverrides: params.attempt.toolOverrides,
+    // Per-agent MCP scoping runs against the resolved run agent before any
+    // transport opens, and covers both the namespace probe below and the
+    // runtime acquisition. Session overrides can only narrow the result.
+    toolOverrides: resolveMcpToolOverridesForAgent(params.attempt.config, {
+      agentId: params.setup.sessionAgentId,
+      toolOverrides: params.attempt.toolOverrides,
+    }),
   };
   const bundleMcpEnabled =
     !params.attempt.forceRestartSafeTools &&

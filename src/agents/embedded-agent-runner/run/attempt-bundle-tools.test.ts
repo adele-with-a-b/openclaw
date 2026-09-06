@@ -137,6 +137,49 @@ describe("prepareEmbeddedAttemptBundleTools", () => {
   });
 
   it.each([
+    { name: "hides an agent-scoped server from an unlisted agent", agent: "max", discovers: false },
+    { name: "serves an agent-scoped server to a listed agent", agent: "migdalia", discovers: true },
+  ])("$name", async ({ agent, discovers }) => {
+    const input = createInput([], []);
+    input.attempt.config = {
+      plugins: { enabled: false },
+      mcp: { servers: { finance: { command: "unused", agents: ["migdalia"] } } },
+    };
+    input.attempt.toolsAllow = ["finance*"];
+    input.setup = createAttemptSetupFixture({ sessionAgentId: agent });
+    mocks.acquireSessionMcpRuntime.mockResolvedValue({ runtime: {}, releaseLease: () => {} });
+    mocks.materializeBundleMcpToolsForRun.mockResolvedValue({ tools: [] });
+
+    await prepareEmbeddedAttemptBundleTools(input);
+
+    // An unlisted agent must not reach namespace discovery or runtime creation
+    // for the scoped server, so its transport never opens for this run.
+    expect(mocks.acquireSessionMcpRuntime).toHaveBeenCalledTimes(discovers ? 1 : 0);
+  });
+
+  it("projects the agent scope denial into the acquired MCP runtime", async () => {
+    const input = createInput([], []);
+    input.attempt.config = {
+      plugins: { enabled: false },
+      mcp: {
+        servers: {
+          finance: { command: "unused", agents: ["migdalia"] },
+          docs: { command: "unused" },
+        },
+      },
+    };
+    input.setup = createAttemptSetupFixture({ sessionAgentId: "max" });
+    mocks.acquireSessionMcpRuntime.mockResolvedValue({ runtime: {}, releaseLease: () => {} });
+    mocks.materializeBundleMcpToolsForRun.mockResolvedValue({ tools: [] });
+
+    await prepareEmbeddedAttemptBundleTools(input);
+
+    expect(mocks.acquireSessionMcpRuntime).toHaveBeenCalledWith(
+      expect.objectContaining({ toolOverrides: { mcpServers: { finance: false } } }),
+    );
+  });
+
+  it.each([
     { servers: ["chrome dev"], allow: "chrome-dev*" },
     { servers: ["9chrome"], allow: "mcp-9chrome*" },
     { servers: ["chrome dev", "chrome-dev"], allow: "chrome-dev-2*" },

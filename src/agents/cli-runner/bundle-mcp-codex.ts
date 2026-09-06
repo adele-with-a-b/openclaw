@@ -6,7 +6,6 @@ import type { SessionToolOverrides } from "../../config/sessions/types.js";
 import type { OpenClawConfig } from "../../config/types.openclaw.js";
 import { loadMcpToolGrants } from "../../infra/exec-approvals-mcp.js";
 import type { BundleMcpConfig, BundleMcpServerConfig } from "../../plugins/bundle-mcp.js";
-import { isValidAgentId, normalizeAgentId } from "../../routing/session-key.js";
 import {
   acquireSessionMcpRuntime,
   releaseSessionMcpRuntime,
@@ -21,6 +20,11 @@ import {
 } from "../codex-mcp-config.js";
 import { resolveConversationCapabilityProfile } from "../conversation-capability-profile.js";
 import type { EmbeddedRunAttemptParams } from "../embedded-agent-runner/run/types.js";
+import {
+  applyMcpServerScopeDenials,
+  isMcpServerAllowedForAgent,
+  isMcpServerAllowedForAgentIds,
+} from "../mcp-agent-scope.js";
 import { requiresMcpBearerProjection, resolveMcpBearerBundleConfig } from "../mcp-auth-profile.js";
 import { partitionMcpServersByConnectionScope } from "../mcp-connection-resolver.js";
 import { applyPreparedNativeMcpPolicy, prepareNativeMcpPolicy } from "../native-mcp-policy.js";
@@ -51,55 +55,43 @@ type CodexUserMcpServersProjectionOptions = {
   preparedNativeMcpPolicy?: PreparedNativeMcpPolicy;
 };
 
-function normalizeAgentIds(value: unknown): string[] {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-  return value
-    .filter((entry): entry is string => typeof entry === "string")
-    .map((entry) => entry.trim())
-    .filter((entry) => isValidAgentId(entry))
-    .map((entry) => normalizeAgentId(entry));
-}
-
 function readCodexProjectionConfig(server: BundleMcpServerConfig): Record<string, unknown> {
   return isRecord(server.codex) ? server.codex : {};
 }
 
+/**
+ * Both allowlists must admit the agent on this path: the generic `agents` field
+ * applies to every runtime, and `codex.agents` narrows further for Codex
+ * app-server threads. Neither field can widen the other.
+ */
 function isCodexMcpServerAllowedForAgent(
   server: BundleMcpServerConfig,
   options: CodexUserMcpServersProjectionOptions | undefined,
 ): boolean {
-  const codex = readCodexProjectionConfig(server);
-  if (!Object.hasOwn(codex, "agents")) {
-    return true;
-  }
-  const agentIds = normalizeAgentIds(codex.agents);
-  if (agentIds.length === 0 || !options?.agentId) {
+  if (!isMcpServerAllowedForAgent(server, options?.agentId)) {
     return false;
   }
-  return agentIds.includes(normalizeAgentId(options.agentId));
+  const codex = readCodexProjectionConfig(server);
+  return isMcpServerAllowedForAgentIds(
+    Object.hasOwn(codex, "agents"),
+    codex.agents,
+    options?.agentId,
+  );
 }
 
 /**
- * Applies Codex-only agent scoping before OpenClaw resolves credentials or opens transports.
- * Session overrides may narrow this result, but cannot widen `codex.agents`.
+ * Applies agent scoping before OpenClaw resolves credentials or opens transports.
+ * Session overrides may narrow this result, but cannot widen either allowlist.
  */
 export function resolveCodexMcpToolOverridesForAgent(
   cfg: OpenClawConfig | undefined,
   options: Pick<CodexUserMcpServersProjectionOptions, "agentId" | "toolOverrides">,
 ): Pick<SessionToolOverrides, "mcpServers" | "mcpToolsDeny"> | undefined {
-  const deniedServerNames = Object.entries(normalizeConfiguredMcpServers(cfg?.mcp?.servers))
-    .filter(([, server]) => !isCodexMcpServerAllowedForAgent(server, options))
-    .map(([name]) => name);
-  if (deniedServerNames.length === 0) {
-    return options.toolOverrides;
-  }
-  const mcpServers = { ...options.toolOverrides?.mcpServers };
-  for (const serverName of deniedServerNames) {
-    mcpServers[serverName] = false;
-  }
-  return { ...options.toolOverrides, mcpServers };
+  return applyMcpServerScopeDenials({
+    cfg,
+    toolOverrides: options.toolOverrides,
+    isAllowed: (server) => isCodexMcpServerAllowedForAgent(server, options),
+  });
 }
 
 function readSessionMcpServerOverride(

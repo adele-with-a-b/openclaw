@@ -22,6 +22,12 @@ export type McpServerToolFilterConfig = {
 export type McpServerConfig = {
   /** Set false to keep the saved definition while excluding it from runtime/probe sessions. */
   enabled?: boolean;
+  /**
+   * OpenClaw agent ids allowed to receive this server on every runtime. Omit to
+   * keep it available to every agent. Generalizes the Codex-only `codex.agents`
+   * allowlist; on the Codex app-server path both allowlists must admit the agent.
+   */
+  agents?: string[];
   /** Stdio transport: command to spawn. */
   command?: string;
   /** Stdio transport: arguments for the command. */

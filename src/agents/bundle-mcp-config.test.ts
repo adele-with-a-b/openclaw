@@ -1,6 +1,7 @@
 /** Tests merging bundled MCP defaults with OpenClaw user MCP configuration. */
 import { describe, expect, it, vi } from "vitest";
 import { loadMergedBundleMcpConfig, toCliBundleMcpServerConfig } from "./bundle-mcp-config.js";
+import { resolveMcpToolOverridesForAgent } from "./mcp-agent-scope.js";
 
 const mocks = vi.hoisted(() => ({
   bundleMcp: {
@@ -78,6 +79,12 @@ describe("loadMergedBundleMcpConfig", () => {
     });
   });
 
+  it("keeps the OpenClaw agents allowlist out of the CLI-native handoff", () => {
+    expect(
+      toCliBundleMcpServerConfig({ command: "node", args: ["finance.mjs"], agents: ["migdalia"] }),
+    ).toEqual({ command: "node", args: ["finance.mjs"] });
+  });
+
   it("keeps disabled OpenClaw MCP servers out of embedded runtimes", () => {
     const merged = loadMergedBundleMcpConfig({
       workspaceDir: "/workspace",
@@ -113,6 +120,51 @@ describe("loadMergedBundleMcpConfig", () => {
 
     expect(merged.config.mcpServers).not.toHaveProperty("bundleProbe");
     expect(merged.prepareDataDirsByServer).toStrictEqual({});
+  });
+
+  it.each([
+    {
+      name: "hides an agent-scoped server from an unlisted agent",
+      agentId: "max",
+      expected: false,
+    },
+    {
+      name: "serves an agent-scoped server to a listed agent",
+      agentId: "migdalia",
+      expected: true,
+    },
+    { name: "fails closed when no agent id resolves", agentId: undefined, expected: false },
+  ])("$name", ({ agentId, expected }) => {
+    // The runtime seams project per-agent scoping into session tool overrides,
+    // so the merge that launches servers must honor that projection.
+    const cfg = {
+      mcp: {
+        servers: {
+          finance: { command: "node", args: ["finance.mjs"], agents: ["migdalia"] },
+        },
+      },
+    };
+    const merged = loadMergedBundleMcpConfig({
+      workspaceDir: "/workspace",
+      cfg,
+      toolOverrides: resolveMcpToolOverridesForAgent(cfg, { agentId }),
+    });
+
+    expect(Object.hasOwn(merged.config.mcpServers, "finance")).toBe(expected);
+  });
+
+  it("hides a bundle default that an agent-scoped server shadows", () => {
+    const cfg = {
+      plugins: { entries: { "bundle-probe": { enabled: true } } },
+      mcp: { servers: { bundleProbe: { command: "node", agents: ["migdalia"] } } },
+    };
+    const merged = loadMergedBundleMcpConfig({
+      workspaceDir: "/workspace",
+      cfg,
+      toolOverrides: resolveMcpToolOverridesForAgent(cfg, { agentId: "max" }),
+    });
+
+    expect(merged.config.mcpServers).not.toHaveProperty("bundleProbe");
   });
 
   it.each([

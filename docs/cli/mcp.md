@@ -23,14 +23,15 @@ Use [`openclaw acp`](/cli/acp) when OpenClaw should host a coding harness sessio
 
 ## Choose the right MCP path
 
-| Goal                                                                | Use                                                                  | Why                                                                                                             |
-| ------------------------------------------------------------------- | -------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| Let an external MCP client read/send OpenClaw channel conversations | `openclaw mcp serve`                                                 | OpenClaw is the MCP server and exposes Gateway-backed conversations over stdio.                                 |
-| Save third-party MCP servers for OpenClaw-managed agent runs        | `openclaw mcp add`, `set`, `configure`, `tools`, `login`             | OpenClaw is the MCP client-side registry and later projects those servers into eligible runtimes.               |
-| Check a saved server without running an agent turn                  | `openclaw mcp status`, `doctor`, `probe`                             | `status` and `doctor` inspect config; `probe` opens a live MCP connection and lists capabilities.               |
-| Edit MCP config from a browser                                      | Control UI `/settings/mcp` (`/mcp` alias)                            | The page shows inventory, enablement, OAuth/filter summaries, command hints, and a scoped `mcp` editor.         |
-| Give Codex app-server a scoped native MCP server                    | `mcp.servers.<name>.codex`                                           | The `codex` block only affects Codex app-server thread projection and is stripped before native config handoff. |
-| Run ACP-hosted harness sessions                                     | [`openclaw acp`](/cli/acp) and [ACP Agents](/tools/acp-agents-setup) | ACP bridge mode does not accept per-session MCP server injection; configure gateway/plugin bridges instead.     |
+| Goal                                                                | Use                                                                  | Why                                                                                                              |
+| ------------------------------------------------------------------- | -------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Let an external MCP client read/send OpenClaw channel conversations | `openclaw mcp serve`                                                 | OpenClaw is the MCP server and exposes Gateway-backed conversations over stdio.                                  |
+| Save third-party MCP servers for OpenClaw-managed agent runs        | `openclaw mcp add`, `set`, `configure`, `tools`, `login`             | OpenClaw is the MCP client-side registry and later projects those servers into eligible runtimes.                |
+| Check a saved server without running an agent turn                  | `openclaw mcp status`, `doctor`, `probe`                             | `status` and `doctor` inspect config; `probe` opens a live MCP connection and lists capabilities.                |
+| Edit MCP config from a browser                                      | Control UI `/settings/mcp` (`/mcp` alias)                            | The page shows inventory, enablement, OAuth/filter summaries, command hints, and a scoped `mcp` editor.          |
+| Scope an MCP server to specific agents on every runtime             | `mcp.servers.<name>.agents`                                          | Allowlist of OpenClaw agent ids applied before credentials resolve or transports open, then stripped downstream. |
+| Give Codex app-server a scoped native MCP server                    | `mcp.servers.<name>.codex`                                           | The `codex` block only affects Codex app-server thread projection and is stripped before native config handoff.  |
+| Run ACP-hosted harness sessions                                     | [`openclaw acp`](/cli/acp) and [ACP Agents](/tools/acp-agents-setup) | ACP bridge mode does not accept per-session MCP server injection; configure gateway/plugin bridges instead.      |
 
 <Tip>
 If you are not sure which path you need, start with `openclaw mcp status --verbose`. It shows what OpenClaw has saved without starting any MCP servers.
@@ -372,6 +373,7 @@ Those saved definitions are for runtimes that OpenClaw launches or configures la
     - `add` builds a definition from flags and probes before saving unless `--no-probe` is set or OAuth authorization is needed first
     - runtime adapters decide which transport shapes they actually support at execution time
     - `enabled: false` keeps a server saved but excludes it from embedded runtime discovery
+    - `agents: ["<agentId>", ...]` restricts a server to those OpenClaw agents on every runtime; omit it to keep the server available to every agent
     - `requestTimeoutMs` and `connectionTimeoutMs` set per-server request and connection timeouts in milliseconds
     - `supportsParallelToolCalls: true` marks servers that adapters can call concurrently
     - HTTP servers can use static headers, OAuth login, TLS verification control, and mTLS certificate/key paths
@@ -386,6 +388,28 @@ Those saved definitions are for runtimes that OpenClaw launches or configures la
 </AccordionGroup>
 
 Runtime adapters may normalize this shared registry into the shape their downstream client expects. For example, embedded OpenClaw consumes OpenClaw `transport` values directly, while Claude Code and Gemini receive CLI-native `type` values such as `http`, `sse`, or `stdio`.
+
+#### Per-agent server scoping
+
+Use the optional `agents` array on a server to restrict it to specific OpenClaw
+agent ids on every runtime (embedded, Claude Code, Gemini, and Codex
+app-server):
+
+```json
+{ "mcp": { "servers": { "finance": { "command": "finance-mcp", "agents": ["migdalia"] } } } }
+```
+
+When `agents` is omitted, every agent receives the server. When it is present,
+only the listed agents do, and the scope resolves against the run's agent before
+OpenClaw resolves credentials or opens a transport. Empty, blank, or invalid
+agent lists are rejected by config validation and fail closed at runtime instead
+of becoming global, as does a resolution with no agent id. Session tool
+overrides can narrow this result further, but cannot widen it. OpenClaw strips
+`agents` before handing the CLI-native config to a runtime such as Claude Code
+or Gemini.
+
+`codex.agents` remains the Codex-only allowlist. When both are set, both must
+admit the agent on the Codex app-server path.
 
 ### Codex tool approvals
 
@@ -452,7 +476,9 @@ card, not to the model.
 The optional `codex` block is OpenClaw projection metadata for Codex app-server
 threads only; it does not change ACP sessions, generic Codex harness config, or
 other runtime adapters. Use non-empty `codex.agents` to project a server only
-into specific OpenClaw agent ids. Empty, blank, or invalid agent lists are
+into specific OpenClaw agent ids on this path; use the generic
+[`agents` allowlist](#per-agent-server-scoping) to scope a server on every
+runtime. Empty, blank, or invalid agent lists are
 rejected by config validation and omitted by the runtime projection path
 instead of becoming global. OpenClaw strips the `codex` metadata before handing
 the native `mcp_servers` config to Codex.

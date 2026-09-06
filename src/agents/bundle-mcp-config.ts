@@ -66,6 +66,9 @@ export function toCliBundleMcpServerConfig(server: BundleMcpServerConfig): Bundl
   const next = { ...server } as Record<string, unknown>;
   const rawTransport = next.transport;
   delete next.transport;
+  // `agents` is an OpenClaw-side scoping control, already applied before this
+  // adapter runs; it must not reach the CLI-native config handoff.
+  delete next.agents;
   if (typeof next.type === "string") {
     return next as BundleMcpServerConfig;
   }

@@ -115,6 +115,7 @@ import {
 import { selectContextEngineForTranscriptHost } from "../harness/context-engine-logical-turn.js";
 import { drainPendingContextEngineTurnsBeforeRun } from "../harness/context-engine-turn-attempt.js";
 import { createAgentQuestionAnswerAuthority } from "../harness/host-private-capabilities.js";
+import { resolveMcpToolOverridesForAgent } from "../mcp-agent-scope.js";
 import type { ResolvedProviderAuth } from "../model-auth-runtime-shared.js";
 import { findModelCatalogEntry, loadManifestModelCatalog } from "../model-catalog.js";
 import type { ModelCatalogEntry } from "../model-catalog.types.js";
@@ -1492,13 +1493,19 @@ export async function prepareCliRunContext(
       inputProvenance: params.inputProvenance,
       scheduledToolPolicy: params.scheduledToolPolicy,
     });
+    // Per-agent MCP scoping resolves against this run's agent before the CLI
+    // backend receives any server definition, credential, or native policy.
+    const mcpScopedToolOverrides = resolveMcpToolOverridesForAgent(params.config, {
+      agentId: sessionAgentId,
+      toolOverrides: params.toolOverrides,
+    });
     const preparedBackend = await prepareCliBundleMcpConfig({
       enabled: bundleMcpEnabled || systemAgentMcpConfig !== undefined,
       mode: backendResolved.bundleMcpMode,
       backend: backendResolved.config,
       workspaceDir,
       config: params.config,
-      toolOverrides: params.toolOverrides,
+      toolOverrides: mcpScopedToolOverrides,
       agentDir,
       // Restricted runs serve only the loopback server; merging user/plugin
       // MCP servers would let the run reach tools outside its allowlist.

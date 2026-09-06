@@ -427,6 +427,66 @@ describe("buildCodexUserMcpServersThreadConfigPatch", () => {
     });
   });
 
+  it("honors the generic agents allowlist on the Codex app-server path", () => {
+    // A server scoped only through the runtime-wide `agents` field must not
+    // widen back to every agent on this path.
+    const cfg = {
+      mcp: {
+        servers: {
+          finance: {
+            transport: "stdio",
+            command: "node",
+            args: ["finance-mcp.js"],
+            agents: ["atlas"],
+          },
+          global: { transport: "stdio", command: "node", args: ["global-mcp.js"] },
+        },
+      },
+    } as unknown as OpenClawConfig;
+
+    const atlasPatch = buildCodexUserMcpServersThreadConfigPatch(cfg, { agentId: "atlas" });
+    expect(Object.keys(atlasPatch!.mcp_servers).toSorted()).toEqual(["finance", "global"]);
+
+    const apoloPatch = buildCodexUserMcpServersThreadConfigPatch(cfg, { agentId: "apolo" });
+    expect(Object.keys(apoloPatch!.mcp_servers)).toEqual(["global"]);
+  });
+
+  it("requires both the generic and Codex allowlists to admit the agent", () => {
+    const cfg = {
+      mcp: {
+        servers: {
+          scoped: {
+            transport: "stdio",
+            command: "node",
+            args: ["scoped-mcp.js"],
+            agents: ["atlas"],
+            codex: { agents: ["apolo"] },
+          },
+        },
+      },
+    } as unknown as OpenClawConfig;
+
+    // Neither list can widen the other, so disjoint lists admit no agent here.
+    expect(buildCodexUserMcpServersThreadConfigPatch(cfg, { agentId: "atlas" })).toBeUndefined();
+    expect(buildCodexUserMcpServersThreadConfigPatch(cfg, { agentId: "apolo" })).toBeUndefined();
+  });
+
+  it("omits generically scoped MCP servers when no OpenClaw agent id is available", () => {
+    const patch = buildCodexUserMcpServersThreadConfigPatch({
+      mcp: {
+        servers: {
+          finance: {
+            transport: "stdio",
+            command: "node",
+            args: ["finance-mcp.js"],
+            agents: ["atlas"],
+          },
+        },
+      },
+    } as unknown as OpenClawConfig);
+    expect(patch).toBeUndefined();
+  });
+
   it("omits scoped Codex MCP servers when no OpenClaw agent id is available", () => {
     const patch = buildCodexUserMcpServersThreadConfigPatch({
       mcp: {
