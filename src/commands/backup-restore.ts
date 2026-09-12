@@ -160,10 +160,13 @@ export async function backupRestoreCommand(
       hardlinkTargets,
       new Set(symbolicLinks.map(({ entryPath }) => entryPath)),
     );
+    // Materialize all parents before links: filesystem aliases then collide with
+    // directories instead of letting an earlier link redirect a later write.
+    for (const { entryPath } of symbolicLinks) {
+      await fs.mkdir(path.dirname(path.join(targetPath, entryPath)), { recursive: true });
+    }
     for (const { entryPath, linkpath } of symbolicLinks) {
-      const destination = path.join(targetPath, entryPath);
-      await fs.mkdir(path.dirname(destination), { recursive: true });
-      await fs.symlink(linkpath, destination);
+      await fs.symlink(linkpath, path.join(targetPath, entryPath));
     }
   } catch (extractionError) {
     try {

@@ -524,12 +524,17 @@ describe("backupRestoreCommand", () => {
   );
 
   it.each([
-    { label: "undeclared link entry", childType: undefined },
-    { label: "file beneath a symbolic link", childType: "File" as const },
-    { label: "link beneath a symbolic link", childType: "SymbolicLink" as const },
+    { label: "undeclared link entry", childType: undefined, suffix: "" },
+    { label: "file beneath a symbolic link", childType: "File" as const, suffix: "" },
+    { label: "link beneath a symbolic link", childType: "SymbolicLink" as const, suffix: "" },
+    {
+      label: "link beneath a space-suffixed symbolic link",
+      childType: "SymbolicLink" as const,
+      suffix: " ",
+    },
   ])(
     "backupRestoreCommand rejects $label before touching the restore target",
-    async ({ childType }) => {
+    async ({ childType, suffix }) => {
       await withOpenClawTestState(
         { layout: "state-only", prefix: "oc-link-", scenario: "minimal" },
         async (state) => {
@@ -540,7 +545,9 @@ describe("backupRestoreCommand", () => {
           await fs.writeFile(path.join(outside, "sentinel"), "unchanged\n");
           const archiveRoot = "backup";
           const declaredAssetRoot = buildBackupArchivePath(archiveRoot, "/tmp/restore-state");
-          const entryPath = childType ? `${declaredAssetRoot}/a` : `${archiveRoot}/payload/a`;
+          const entryPath = childType
+            ? `${declaredAssetRoot}/a${suffix}`
+            : `${archiveRoot}/payload/a`;
           await writeArchive({
             archivePath,
             archiveRoot,

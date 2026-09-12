@@ -20,16 +20,16 @@ function stripTrailingSlashes(value: string): string {
 }
 
 export function normalizeArchivePath(entryPath: string, label: string): string {
-  const trimmed = stripTrailingSlashes(entryPath.trim());
-  if (!trimmed) {
+  const filename = stripTrailingSlashes(entryPath);
+  if (!filename) {
     throw new Error(`${label} is empty.`);
   }
-  assertPortableRelativePathSyntax(trimmed, label, entryPath);
-  if (trimmed.split("/").some((segment) => segment === "." || segment === "..")) {
+  assertPortableRelativePathSyntax(filename, label, entryPath);
+  if (filename.split("/").some((segment) => segment === "." || segment === "..")) {
     throw new Error(`${label} contains path traversal segments: ${entryPath}`);
   }
 
-  const normalized = stripTrailingSlashes(path.posix.normalize(trimmed));
+  const normalized = stripTrailingSlashes(path.posix.normalize(filename));
   if (!normalized || normalized === "." || normalized === ".." || normalized.startsWith("../")) {
     throw new Error(`${label} resolves outside the archive root: ${entryPath}`);
   }
