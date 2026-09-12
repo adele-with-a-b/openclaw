@@ -3584,6 +3584,7 @@ describe("createBackupArchive", () => {
           expect(await fs.readlink(path.join(restored, link.path))).toBe(linkpath);
           const workspaceAsset = expectDefined(
             result.assets.find((asset) => asset.kind === "workspace"),
+            "workspace asset",
           );
           expect(
             await fs.readFile(path.join(restored, workspaceAsset.archivePath, "note.txt"), "utf8"),
