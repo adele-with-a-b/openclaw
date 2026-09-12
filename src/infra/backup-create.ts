@@ -262,7 +262,7 @@ function buildManifest(
       onlyConfig: result.onlyConfig,
     },
     paths: {
-      stateDir: plan.stateDir,
+      stateDir: plan.inventory.stateDir,
       configPath: plan.configPath,
       oauthDir: plan.oauthDir,
       workspaceDirs: plan.workspaceDirs,
@@ -300,7 +300,7 @@ export function formatBackupCreateSummary(result: BackupCreateResult): string[] 
   }
   for (const link of result.externalSymbolicLinks ?? []) {
     lines.push(
-      `External link preserved (target not copied): ${JSON.stringify(link.entryPath)} -> ${JSON.stringify(link.linkpath)}`,
+      `External link preserved (target not copied through link): ${JSON.stringify(link.entryPath)} -> ${JSON.stringify(link.linkpath)}`,
     );
   }
   if (result.dryRun) {
@@ -469,6 +469,7 @@ export async function createBackupArchive(
 
   const createdAt = new Date(nowMs).toISOString();
   const stateAsset = plan.included.find((asset) => asset.kind === "state");
+  const stateDir = plan.inventory.stateDir;
   const result: BackupCreateResult = {
     createdAt,
     archiveRoot,
@@ -673,6 +674,11 @@ export async function createBackupArchive(
                           entryPath: archiveEntryPath,
                           linkpath: entry.linkpath,
                           platform: manifest.platform,
+                          state: {
+                            sourcePath: stateDir,
+                            archivePath: buildBackupArchivePath(archiveRoot, stateDir),
+                          },
+                          hasExternalLinkReport: true,
                           assets: manifest.assets,
                         });
                         if (external) {
@@ -694,11 +700,7 @@ export async function createBackupArchive(
                 ],
               ),
               () => {
-                if (externalSymbolicLinks.length) {
-                  manifest.externalSymbolicLinks = externalSymbolicLinks;
-                } else {
-                  delete manifest.externalSymbolicLinks;
-                }
+                manifest.externalSymbolicLinks = externalSymbolicLinks;
                 const contents = Buffer.from(JSON.stringify(manifest, null, 2) + "\n");
                 const sizeError = backupManifestSizeError(contents.length);
                 if (sizeError) {

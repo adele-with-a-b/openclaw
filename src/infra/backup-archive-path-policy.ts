@@ -56,8 +56,10 @@ export function recordArchiveSymbolicLink(params: {
   entryPath: string;
   linkpath?: string;
   platform: string;
+  state?: { sourcePath: string; archivePath: string };
+  hasExternalLinkReport: boolean;
   assets: readonly { archivePath: string; sourcePath: string }[];
-}): BackupSymbolicLink & { external: boolean } {
+}): BackupSymbolicLink & { external: boolean | undefined } {
   if (!params.linkpath || params.linkpath.includes("\0")) {
     throw new Error(`Archive symbolic link is missing its target: ${params.entryPath}`);
   }
@@ -70,6 +72,16 @@ export function recordArchiveSymbolicLink(params: {
       `Archive symbolic link is outside the declared backup assets: ${params.entryPath} -> ${params.linkpath}`,
     );
   }
+  // Archives predating link reports only stored portable links to declared assets.
+  if (!params.hasExternalLinkReport) {
+    assertPortableRelativePathSyntax(params.linkpath, "Archive symbolic link target");
+    const target = path.posix.join(path.posix.dirname(entryPath), params.linkpath);
+    if (!params.assets.some(({ archivePath }) => isArchivePathWithin(target, archivePath))) {
+      throw new Error("Backup manifest external symbolic links do not match archive entries.");
+    }
+  } else if (!params.state) {
+    throw new Error("Backup manifest is missing the symbolic-link state boundary.");
+  }
   // Classify the recorded first hop without opening its target or collapsing a chain.
   const sourcePaths = params.platform === "win32" ? path.win32 : path.posix;
   const absolute = sourcePaths.isAbsolute(params.linkpath);
@@ -80,14 +92,14 @@ export function recordArchiveSymbolicLink(params: {
         path.posix.dirname(entryPath),
         params.platform === "win32" ? params.linkpath.replaceAll("\\", "/") : params.linkpath,
       );
-  const external = !params.assets.some(({ sourcePath, archivePath }) => {
-    const relative = targetPaths.relative(absolute ? sourcePath : archivePath, target);
-    return (
-      relative === "" ||
-      (!targetPaths.isAbsolute(relative) &&
-        relative !== ".." &&
-        !relative.startsWith(`..${targetPaths.sep}`))
-    );
-  });
+  const relative = params.state
+    ? targetPaths.relative(absolute ? params.state.sourcePath : params.state.archivePath, target)
+    : undefined;
+  const external =
+    relative === undefined
+      ? undefined
+      : targetPaths.isAbsolute(relative) ||
+        relative === ".." ||
+        relative.startsWith(`..${targetPaths.sep}`);
   return { entryPath: params.entryPath, linkpath: params.linkpath, external };
 }

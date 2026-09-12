@@ -1527,8 +1527,36 @@ describe("backupVerifyCommand", () => {
 
       await expect(
         backupVerifyCommand(createTestRuntime(), { archive: archivePath }),
-      ).resolves.toMatchObject({ ok: true, assetCount: 2, symlinkCount: 2 });
+      ).resolves.toMatchObject({
+        ok: true,
+        assetCount: 2,
+        symlinkCount: 2,
+        externalSymbolicLinks: [
+          {
+            entryPath: `${stateAssetRoot}/workspace-link`,
+            linkpath: path.posix.relative(stateAssetRoot, `${workspaceAssetRoot}/workspace.txt`),
+          },
+        ],
+      });
 
+      manifest.externalSymbolicLinks = [];
+      archiveEntries[0] = encodeTarEntry({
+        path: `${TEST_ARCHIVE_ROOT}/manifest.json`,
+        contents: `${JSON.stringify(manifest)}\n`,
+      });
+      await fs.writeFile(
+        archivePath,
+        gzipSync(Buffer.concat([...archiveEntries, Buffer.alloc(1024)])),
+      );
+      await expect(
+        backupVerifyCommand(createTestRuntime(), { archive: archivePath }),
+      ).rejects.toThrow(/external symbolic links do not match archive entries/iu);
+
+      delete manifest.externalSymbolicLinks;
+      archiveEntries[0] = encodeTarEntry({
+        path: `${TEST_ARCHIVE_ROOT}/manifest.json`,
+        contents: `${JSON.stringify(manifest)}\n`,
+      });
       archiveEntries.push(
         encodeTarEntry({
           path: `${stateAssetRoot}/escaping-link`,
@@ -1544,6 +1572,10 @@ describe("backupVerifyCommand", () => {
         backupVerifyCommand(createTestRuntime(), { archive: archivePath }),
       ).rejects.toThrow(/external symbolic links do not match archive entries/iu);
       manifest.externalSymbolicLinks = [
+        {
+          entryPath: `${stateAssetRoot}/workspace-link`,
+          linkpath: path.posix.relative(stateAssetRoot, `${workspaceAssetRoot}/workspace.txt`),
+        },
         {
           entryPath: `${stateAssetRoot}/escaping-link`,
           linkpath: "../outside-declared-assets",

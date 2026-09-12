@@ -184,7 +184,7 @@ export function parseBackupManifest(raw: string): BackupManifest {
         }
       : undefined,
     assets,
-    externalSymbolicLinks,
+    ...(parsed.externalSymbolicLinks === undefined ? {} : { externalSymbolicLinks }),
   };
 }
 

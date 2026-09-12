@@ -655,11 +655,21 @@ async function verifyResolvedBackupArchive(archivePath: string): Promise<Prepare
       }
     }
   }
+  const state =
+    manifest.assets.find((asset) => asset.kind === "state") ??
+    (manifest.paths?.stateDir
+      ? {
+          sourcePath: manifest.paths.stateDir,
+          archivePath: buildBackupArchivePath(manifest.archiveRoot, manifest.paths.stateDir),
+        }
+      : undefined);
   for (const link of symbolicLinks) {
     const { external, ...record } = recordArchiveSymbolicLink({
       ...link,
       archiveRoot: manifest.archiveRoot,
       platform: manifest.platform,
+      state,
+      hasExternalLinkReport: manifest.externalSymbolicLinks !== undefined,
       assets: manifest.assets,
     });
     preparedSymbolicLinks.push(record);
@@ -671,10 +681,11 @@ async function verifyResolvedBackupArchive(archivePath: string): Promise<Prepare
     (manifest.externalSymbolicLinks ?? []).map(({ entryPath, linkpath }) => [entryPath, linkpath]),
   );
   if (
-    reportedLinks.size !== externalSymbolicLinks.length ||
-    externalSymbolicLinks.some(
-      ({ entryPath, linkpath }) => reportedLinks.get(entryPath) !== linkpath,
-    )
+    manifest.externalSymbolicLinks !== undefined &&
+    (reportedLinks.size !== externalSymbolicLinks.length ||
+      externalSymbolicLinks.some(
+        ({ entryPath, linkpath }) => reportedLinks.get(entryPath) !== linkpath,
+      ))
   ) {
     throw new Error("Backup manifest external symbolic links do not match archive entries.");
   }

@@ -38,7 +38,7 @@ committed state safely.
 
 ## Choose a path
 
-- One-off, everything, portable: `openclaw backup create` archive.
+- One-off state and workspace archive: `openclaw backup create`.
 - One database, compact and verified: `openclaw backup sqlite create`.
 - Versioned and incremental by content: `openclaw backup git create`.
 - Regular protection: provision the Gateway-owned backup automation.
@@ -48,6 +48,11 @@ committed state safely.
   `sqlite3_rsync`.
 
 ## Full archives
+
+Absolute symbolic links keep their original target locations, including links
+to separately backed-up config or credentials. Review these links before
+activating state on another host or at another path; see the
+[backup symbolic-link caveat](/cli/backup#what-gets-backed-up).
 
 ```bash
 openclaw backup create --output ~/Backups/openclaw --verify

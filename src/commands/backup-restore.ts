@@ -192,7 +192,7 @@ export async function backupRestoreCommand(
       ...BACKUP_RESTORE_WARNINGS,
       ...(verified.externalSymbolicLinks ?? []).map(
         ({ entryPath, linkpath }) =>
-          `External link restored (target not copied): ${JSON.stringify(entryPath)} -> ${JSON.stringify(linkpath)}`,
+          `External link restored (target not copied through link): ${JSON.stringify(entryPath)} -> ${JSON.stringify(linkpath)}`,
       ),
     ],
   };
