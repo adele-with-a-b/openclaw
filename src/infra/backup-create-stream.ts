@@ -9,7 +9,7 @@ import { sameFileIdentity } from "./fs-safe-advanced.js";
 const BACKUP_ARCHIVE_IDLE_TIMEOUT_MS = 5 * 60_000;
 
 /** Seal the manifest from observed entries after the single payload traversal. */
-export function appendBackupManifest(payload: NodeJS.ReadableStream, createManifest: () => Buffer) {
+export function appendBackupManifest(payload: AsyncIterable<Buffer>, createManifest: () => Buffer) {
   return compose(
     payload,
     async function* (source: AsyncIterable<Buffer>) {

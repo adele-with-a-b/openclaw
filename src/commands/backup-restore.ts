@@ -94,6 +94,7 @@ async function extractBackupArchive(
   archivePath: string,
   targetPath: string,
   hardlinkTargets: ReadonlyMap<string, string>,
+  symbolicLinkPaths: ReadonlySet<string>,
 ): Promise<void> {
   let extractionError: Error | undefined;
   await tar.x({
@@ -106,7 +107,7 @@ async function extractBackupArchive(
     strict: false,
     preserveOwner: false,
     // Create links only after file writes finish; never extract through a link.
-    filter: (_path, entry) => entry.type !== "SymbolicLink",
+    filter: (entryPath) => !symbolicLinkPaths.has(entryPath),
     // node-tar calls this before its path checks and filesystem reservations.
     onReadEntry: (entry) => {
       const target = hardlinkTargets.get(entry.path);
@@ -153,7 +154,12 @@ export async function backupRestoreCommand(
   const target = await prepareRestoreTarget(targetPath);
 
   try {
-    await extractBackupArchive(verified.archivePath, targetPath, hardlinkTargets);
+    await extractBackupArchive(
+      verified.archivePath,
+      targetPath,
+      hardlinkTargets,
+      new Set(symbolicLinks.map(({ entryPath }) => entryPath)),
+    );
     for (const { entryPath, linkpath } of symbolicLinks) {
       const destination = path.join(targetPath, entryPath);
       await fs.mkdir(path.dirname(destination), { recursive: true });
