@@ -49,36 +49,45 @@ export function isArchivePathWithin(child: string, parent: string): boolean {
   return relative === "" || (!relative.startsWith("../") && relative !== "..");
 }
 
-export function assertArchiveSymbolicLinkTarget(params: {
+export type BackupSymbolicLink = { entryPath: string; linkpath: string };
+
+export function recordArchiveSymbolicLink(params: {
   archiveRoot: string;
   entryPath: string;
   linkpath?: string;
-  assets: readonly { archivePath: string }[];
-}): void {
-  if (!params.linkpath) {
+  platform: string;
+  assets: readonly { archivePath: string; sourcePath: string }[];
+}): BackupSymbolicLink & { external: boolean } {
+  if (!params.linkpath || params.linkpath.includes("\0")) {
     throw new Error(`Archive symbolic link is missing its target: ${params.entryPath}`);
   }
-  assertPortableRelativePathSyntax(
-    params.linkpath,
-    "Archive symbolic link target",
-    `${params.entryPath} -> ${params.linkpath}`,
-  );
   const entryPath = normalizeArchivePath(params.entryPath, "Archive symbolic link path");
-  const targetPath = path.posix.normalize(
-    path.posix.join(path.posix.dirname(entryPath), params.linkpath),
+  const asset = params.assets.find(({ archivePath }) =>
+    isArchivePathWithin(entryPath, archivePath),
   );
-  if (!isArchivePathWithin(targetPath, normalizeArchiveRoot(params.archiveRoot))) {
-    throw new Error(
-      `Archive symbolic link target is outside the declared archive root: ${params.entryPath} -> ${params.linkpath}`,
-    );
-  }
-  const insideDeclaredAsset = (linkPath: string) =>
-    params.assets.some(({ archivePath: assetPath }) =>
-      isArchivePathWithin(linkPath, normalizeArchivePath(assetPath, "Backup manifest asset path")),
-    );
-  if (!insideDeclaredAsset(entryPath) || !insideDeclaredAsset(targetPath)) {
+  if (!asset || !isArchivePathWithin(entryPath, normalizeArchiveRoot(params.archiveRoot))) {
     throw new Error(
       `Archive symbolic link is outside the declared backup assets: ${params.entryPath} -> ${params.linkpath}`,
     );
   }
+  // Classify the recorded first hop without opening its target or collapsing a chain.
+  const sourcePaths = params.platform === "win32" ? path.win32 : path.posix;
+  const absolute = sourcePaths.isAbsolute(params.linkpath);
+  const targetPaths = absolute ? sourcePaths : path.posix;
+  const target = absolute
+    ? sourcePaths.normalize(params.linkpath)
+    : path.posix.join(
+        path.posix.dirname(entryPath),
+        params.platform === "win32" ? params.linkpath.replaceAll("\\", "/") : params.linkpath,
+      );
+  const external = !params.assets.some(({ sourcePath, archivePath }) => {
+    const relative = targetPaths.relative(absolute ? sourcePath : archivePath, target);
+    return (
+      relative === "" ||
+      (!targetPaths.isAbsolute(relative) &&
+        relative !== ".." &&
+        !relative.startsWith(`..${targetPaths.sep}`))
+    );
+  });
+  return { entryPath: params.entryPath, linkpath: params.linkpath, external };
 }

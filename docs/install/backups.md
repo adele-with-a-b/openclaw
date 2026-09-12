@@ -352,7 +352,7 @@ openclaw backup restore "$ARCHIVE" --target ./restored-openclaw
 
 The target must not exist or must be empty, and it must not be inside the live
 state directory or any configured live agent directory. OpenClaw verifies
-archive structure, the manifest, hardlinks, symbolic-link containment, and
+archive structure, the manifest, hardlinks, symbolic-link entries, and
 SQLite databases before it writes the target. A non-empty target is refused,
 and a failed extraction cleans its incomplete output. The command never writes
 into live state or agent roots and has no force or in-place mode. Treat the
