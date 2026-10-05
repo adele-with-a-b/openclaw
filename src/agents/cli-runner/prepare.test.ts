@@ -3716,6 +3716,64 @@ describe("prepareCliRunContext", () => {
     });
   });
 
+  // The CLI's own login is the only account such a gateway has; a saved sign-in must still prove its boundary.
+  it.each([
+    ["the CLI's own login", false, true],
+    ["an unproven saved sign-in", true, false],
+  ])(
+    "replays raw-tail history after an invalidation with %s",
+    async (_label, savedSignIn, replays) => {
+      const { dir, sessionTarget } = fixture.session;
+      const agentDir = path.join(dir, "agents", "main", "agent");
+      const authProfileId = "history-test:account";
+      if (savedSignIn) {
+        saveAuthProfileStore(
+          {
+            version: 1,
+            profiles: {
+              [authProfileId]: { type: "token", provider: "test-cli", token: "synthetic-account" },
+            },
+          },
+          agentDir,
+        );
+      }
+      // The same sign-in on both sides, so only the account boundary can refuse.
+      const signIn = savedSignIn
+        ? {
+            authProfileId,
+            authEpoch: await resolveCliAuthEpoch({ provider: "test-cli", agentDir, authProfileId }),
+            authEpochVersion: CLI_AUTH_EPOCH_VERSION,
+          }
+        : {};
+      fixture.appendTranscript({
+        id: "msg-1",
+        parentId: null,
+        timestamp: new Date(1).toISOString(),
+        message: makeUserMessage("prior opaque-login ask", 1),
+      });
+
+      const context = await fixture.prepare({
+        agentDir,
+        ...(savedSignIn ? { authProfileId } : {}),
+        sessionKey: sessionTarget.sessionKey,
+        extraSystemPrompt: "changed stable prompt",
+        extraSystemPromptStatic: "changed stable prompt",
+        cliSessionBinding: {
+          sessionId: "cli-session",
+          extraSystemPromptHash: hashCliSessionText("old stable prompt"),
+          ...signIn,
+        },
+        config: createCliBackendConfig({ reseedFromRawTranscriptWhenUncompacted: true }),
+      });
+
+      expect(context.reusableCliSession.mode).toBe("reuse-with-drift");
+
+      expect(context.openClawHistoryPrompt?.includes("prior opaque-login ask") ?? false).toBe(
+        replays,
+      );
+    },
+  );
+
   it.each([false, true])(
     "keeps media progress in current-turn context with plugin execution %s",
     async (pluginExecution) => {

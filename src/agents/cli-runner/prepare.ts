@@ -1793,7 +1793,16 @@ async function prepareCliRunContextWithinReadFence(
       ? await prepareCliHistoryBoundary(historyParams, { credential: authCredential })
       : undefined;
     // Explicit caller-owned memory remains input; it cannot authorize borrowed durable history.
-    const historyAllowed = params.sessionManager !== undefined || cliHistoryWriter !== undefined;
+    // Local: with no OpenClaw-held sign-in the run uses the CLI's own login, the only account
+    // this gateway has, so there is no boundary to prove (openclaw/openclaw#154716).
+    const historyTarget = params.sessionTarget;
+    const ownCliLoginHistory =
+      effectiveAuthProfileId === undefined &&
+      authCredential === undefined &&
+      historyTarget?.sessionId === params.sessionId &&
+      (params.sessionKey === undefined || params.sessionKey === historyTarget.sessionKey);
+    const historyAllowed =
+      params.sessionManager !== undefined || cliHistoryWriter !== undefined || ownCliLoginHistory;
     // Native compatibility and transcript account ownership are independent gates.
     const rawTranscriptReseedReason = !historyAllowed
       ? "auth-unknown"
