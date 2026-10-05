@@ -19,6 +19,8 @@ let user;
 let privateContext;
 let lateDecision;
 let pendingInputUuid;
+let firstInputUuid;
+let injectedContext;
 const priorResponses = {};
 let credentialProof;
 let shutdownDescendant;
@@ -101,6 +103,34 @@ for await (const line of createInterface({ input: process.stdin })) {
     if (scenario === "mcp-elicitation") {
       request("elicitation", { subtype: "elicitation", mcp_server_name: "fixture",
         message: "Choose a fixture option", requested_schema: { type: "object" } });
+      continue;
+    }
+    if (scenario?.startsWith("steer-")) {
+      if (turn === 1) {
+        firstInputUuid = message.uuid;
+        send({ type: "command_lifecycle", state: "started", command_uuid: message.uuid });
+        send({ type: "system", subtype: "init", capabilities: ["msg_lifecycle_v1"] });
+        writeFileSync("turn.ready", "ready");
+        continue;
+      }
+      pendingInputUuid = message.uuid;
+      if (scenario === "steer-after-result") {
+        result({ interim: true });
+        send({ type: "command_lifecycle", state: "completed", command_uuid: firstInputUuid });
+      }
+      send({ type: "command_lifecycle", state: "queued", command_uuid: message.uuid });
+      if (scenario === "steer-exit") {
+        process.exit(1);
+      }
+      if (scenario === "steer-cancelled") {
+        // The turn ends before the queued input runs, and native reports it cancelled.
+        result();
+        send({ type: "command_lifecycle", state: "completed", command_uuid: firstInputUuid });
+        send({ type: "command_lifecycle", state: "cancelled", command_uuid: message.uuid });
+        continue;
+      }
+      request("injected-context", { subtype: "hook_callback", callback_id: hooks.UserPromptSubmit[0].hookCallbackIds[0],
+        input: { hook_event_name: "UserPromptSubmit", prompt: user } });
       continue;
     }
     if (scenario === "input-lifecycle") {
@@ -288,6 +318,21 @@ for await (const line of createInterface({ input: process.stdin })) {
       send({ type: "result", subtype: "success", is_error: false,
         origin: { kind: "task-notification" }, result: JSON.stringify({ finalBackgroundAnswer: true }),
         session_id: "fixture-session" });
+    } else if (id === "injected-context") {
+      injectedContext = response;
+      send({ type: "command_lifecycle", state: "started", command_uuid: pendingInputUuid });
+      if (scenario === "steer-after-result") {
+        send({ type: "system", subtype: "init", capabilities: ["msg_lifecycle_v1"] });
+      }
+      send({ type: "assistant", message: { role: "assistant", content: [{ type: "text", text: "steered" }] } });
+      if (scenario === "steer-merged") {
+        send({ type: "command_lifecycle", state: "completed", command_uuid: pendingInputUuid });
+        result({ injectedContext });
+        send({ type: "command_lifecycle", state: "completed", command_uuid: firstInputUuid });
+      } else {
+        result({ injectedContext });
+        send({ type: "command_lifecycle", state: "completed", command_uuid: pendingInputUuid });
+      }
     } else if (id === "elicitation") {
       result({ elicitation: response });
     } else if (id.startsWith("prior-")) {
