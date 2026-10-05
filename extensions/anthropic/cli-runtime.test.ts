@@ -250,10 +250,14 @@ describe("Claude native stdio boundary", () => {
     await expect(access(path.join(context.cwd, "fixture.pid"))).rejects.toThrow();
   });
 
-  it("keeps an interim result open until native background agents report their final answer", async () => {
-    const context = await createContext("background-success", { liveSession: createLiveSession() });
-    expect(resultDetail(await collectHeld(context)).finalBackgroundAnswer).toBe(true);
-  });
+  // The second scenario's agent runs its own Bash, whose notification reaches the main stream first.
+  it.each(["background-success", "background-agent-subagent-bash"])(
+    "keeps an interim result open until native background agents report their final answer (%s)",
+    async (scenario) => {
+      const context = await createContext(scenario, { liveSession: createLiveSession() });
+      expect(resultDetail(await collectHeld(context)).finalBackgroundAnswer).toBe(true);
+    },
+  );
 
   it.each([
     {
@@ -389,9 +393,7 @@ describe("Claude native stdio boundary", () => {
       context.env.CLAUDE_FIXTURE_EXPLICIT_BACKGROUND = explicit ? "1" : "0";
       const records = await collect(context);
       const results = records.filter((record) => record.type === "result");
-      expect(results).toHaveLength(2);
-      expect(results[0]?.openclaw_interim_result).toBe(true);
-      expect(results.at(-1)).not.toHaveProperty("openclaw_interim_result");
+      expect(results.map((result) => result.openclaw_interim_result)).toEqual([true, undefined]);
       expect(context.liveSession?.current()?.isIdle()).toBe(true);
     },
   );

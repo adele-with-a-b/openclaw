@@ -173,12 +173,21 @@ for await (const line of createInterface({ input: process.stdin })) {
       } else result();
       continue;
     }
-    if (scenario === "background-success") {
+    if (scenario === "background-success" || scenario === "background-agent-subagent-bash") {
+      // The second scenario is Claude Code 2.1.289's order for an agent whose own Bash runs long.
+      const subagentBash = scenario === "background-agent-subagent-bash";
       send({ type: "system", subtype: "background_tasks_changed",
         tasks: [{ task_id: "background-agent", task_type: "local_agent" }] });
+      if (subagentBash) send({ type: "system", subtype: "task_started", task_id: "background-agent",
+        task_type: "local_agent", is_backgrounded: true, tool_use_id: "tool-agent" });
       send({ type: "result", subtype: "success", is_error: false, result: "", session_id: "fixture-session" });
+      if (subagentBash) send({ type: "system", subtype: "task_started", task_id: "subagent-bash",
+        task_type: "local_bash", is_backgrounded: false, owned_by_subagent: true, tool_use_id: "tool-subagent-bash" });
       writeFileSync("background.ready", "ready");
       while (!existsSync("background.release")) await delay(5);
+      // The subagent's own command notifies before its agent does, with no owner field.
+      if (subagentBash) send({ type: "system", subtype: "task_notification", task_id: "subagent-bash",
+        tool_use_id: "tool-subagent-bash", status: "completed" });
       send({ type: "system", subtype: "background_tasks_changed", tasks: [] });
       send({ type: "system", subtype: "task_notification", task_id: "background-agent",
         status: "completed", output_file: "", summary: "agent finished" });
