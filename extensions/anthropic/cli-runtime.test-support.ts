@@ -252,13 +252,27 @@ for await (const line of createInterface({ input: process.stdin })) {
           tool_input: { file_path: "fixture.txt" } } });
       continue;
     }
-    if (scenario === "background-bash-explicit") {
-      // run_in_background: started already backgrounded, may never finish; not held.
-      send({ type: "system", subtype: "task_started", task_id: "server",
-        tool_use_id: "tool-bg", description: "dev server", is_backgrounded: true, task_type: "local_bash" });
+    if (scenario?.startsWith("explicit-bash-")) {
+      // run_in_background in Claude Code 2.1.289's order: the task list names it before task_started.
+      const subagent = scenario === "explicit-bash-subagent";
       send({ type: "system", subtype: "background_tasks_changed",
         tasks: [{ task_id: "server", task_type: "local_bash" }] });
+      send({ type: "system", subtype: "task_started", task_id: "server", tool_use_id: "tool-bg",
+        description: "dev server", is_backgrounded: true, task_type: "local_bash",
+        ...(subagent ? { owned_by_subagent: true } : {}) });
       result({ explicitBackground: true });
+      if (subagent) continue;
+      writeFileSync("background.ready", "ready");
+      while (!existsSync("background.release")) await delay(5);
+      const stopped = scenario === "explicit-bash-stopped";
+      send({ type: "system", subtype: "background_tasks_changed", tasks: [] });
+      send({ type: "system", subtype: "task_notification", task_id: "server", tool_use_id: "tool-bg",
+        status: stopped ? "stopped" : "completed", output_file: "", summary: "dev server" });
+      // TaskStop's own query answers; native opens no notification turn for a stopped command.
+      if (stopped) result({ finalBackgroundAnswer: true, stopped });
+      else send({ type: "result", subtype: "success", is_error: false, num_turns: 1,
+        origin: { kind: "task-notification", producer: "session-task" }, stop_reason: "end_turn",
+        result: JSON.stringify({ pid: process.pid, turn, finalBackgroundAnswer: true, stopped }), session_id: "fixture-session" });
       continue;
     }
     if (["background-error", "background-raw-result", "background-bash-error", "background-bash-raw-result", "background-bash-queued-error", "background-bash-queued-raw-result"].includes(scenario) && turn === 1) {
@@ -380,12 +394,10 @@ for await (const line of createInterface({ input: process.stdin })) {
         send({ type: "system", subtype: "background_tasks_changed", tasks: [task] });
         send({ type: "system", subtype: "task_started", ...task, tool_use_id: "tool-" + turn, is_backgrounded: true });
         result({ firstSeenBackground: true });
-        if (!explicitBackground) {
-          send({ type: "system", subtype: "background_tasks_changed", tasks: [] });
-          send({ type: "system", subtype: "task_notification", task_id: task.task_id, status: "completed" });
-          send({ type: "result", subtype: "success", is_error: false, origin: { kind: "task-notification" },
-            num_turns: 1, result: JSON.stringify({ pid: process.pid, turn, finalBackgroundAnswer: true }), session_id: "fixture-session" });
-        }
+        send({ type: "system", subtype: "background_tasks_changed", tasks: [] });
+        send({ type: "system", subtype: "task_notification", task_id: task.task_id, status: "completed" });
+        send({ type: "result", subtype: "success", is_error: false, origin: { kind: "task-notification" },
+          num_turns: 1, result: JSON.stringify({ pid: process.pid, turn, finalBackgroundAnswer: true }), session_id: "fixture-session" });
         continue;
       }
       if (scenario === "cancel-permission") {

@@ -183,6 +183,33 @@ async function waitForProcessExit(pids: number[], signal: AbortSignal): Promise<
   }
 }
 
+// Runs a turn whose first result must be interim, then releases its fixture background work.
+async function collectHeld(context: CliBackendExecuteContext) {
+  const interim = createDeferred<Record<string, unknown>>();
+  let settled = false;
+  const running = (async () => {
+    const records: Record<string, unknown>[] = [];
+    for await (const record of executeClaudeCli(context)) {
+      records.push(record);
+      if (record.type === "result") {
+        interim.resolve(record);
+      }
+    }
+    settled = true;
+    return records;
+  })();
+  try {
+    expect(await interim.promise).toMatchObject({ type: "result", openclaw_interim_result: true });
+    expect(settled).toBe(false);
+    expect(context.liveSession?.current()?.isIdle()).toBe(false);
+  } finally {
+    await writeFile(path.join(context.cwd, "background.release"), "release");
+  }
+  const records = await running;
+  expect(records.at(-1)).not.toHaveProperty("openclaw_interim_result");
+  return records;
+}
+
 describe("Claude native stdio boundary", () => {
   it.for([
     { scenario: "shutdown-ignore", name: "native parent and child ignore EOF and SIGTERM" },
@@ -444,7 +471,7 @@ describe("Claude native stdio boundary", () => {
   );
 
   it.each([false, true])(
-    "distinguishes explicit=%s when Bash first appears backgrounded",
+    "holds the turn when Bash first appears backgrounded (explicit=%s)",
     async (explicit) => {
       const context = await createContext("background-bash-first-seen", {
         liveSession: createLiveSession(),
@@ -456,24 +483,35 @@ describe("Claude native stdio boundary", () => {
       context.env.CLAUDE_FIXTURE_EXPLICIT_BACKGROUND = explicit ? "1" : "0";
       const records = await collect(context);
       const results = records.filter((record) => record.type === "result");
-      expect(results).toHaveLength(explicit ? 1 : 2);
-      expect(results[0]?.openclaw_interim_result).toBe(explicit ? undefined : true);
+      expect(results).toHaveLength(2);
+      expect(results[0]?.openclaw_interim_result).toBe(true);
       expect(results.at(-1)).not.toHaveProperty("openclaw_interim_result");
       expect(context.liveSession?.current()?.isIdle()).toBe(true);
     },
   );
 
-  it("does not hold the turn for a Bash call started in the background", async () => {
-    // run_in_background work may never finish; holding it would block the next input.
+  it.each(["completed", "stopped"])(
+    "holds the turn for a Bash call started in the background until it is %s",
+    async (status) => {
+      // Same-turn steering keeps input flowing during the hold; a stopped command
+      // has no notification turn, so its stop alone must release the turn.
+      const liveSession = createLiveSession();
+      const context = await createContext(`explicit-bash-${status}`, { liveSession });
+      const first = resultDetail(await collectHeld(context));
+      expect(first).toMatchObject({ finalBackgroundAnswer: true, stopped: status === "stopped" });
+      expect(liveSession.current()?.isIdle()).toBe(true);
+      // The warm process takes the next turn; its fixture release is already written.
+      const next = resultDetail(await collect({ ...context, useResume: true }));
+      expect(next).toMatchObject({ finalBackgroundAnswer: true, turn: 2, pid: first.pid });
+    },
+  );
+
+  it("does not hold the parent turn for background Bash a subagent owns", async () => {
     const liveSession = createLiveSession();
-    const context = await createContext("background-bash-explicit", { liveSession });
-    const first = resultDetail(await collect(context));
-    const handle = liveSession.current();
-    expect(first.explicitBackground).toBe(true);
-    expect(handle?.isIdle()).toBe(true);
-    const second = resultDetail(await collect({ ...context, useResume: true }));
-    expect(second).toMatchObject({ explicitBackground: true, turn: 2, pid: first.pid });
-    expect(liveSession.current()).toBe(handle);
+    const context = await createContext("explicit-bash-subagent", { liveSession });
+    const records = await collect(context);
+    expect(records.filter((record) => record.type === "result")).toHaveLength(1);
+    expect(liveSession.current()?.isIdle()).toBe(true);
   });
 
   it.for(["abort", "process exit"])(

@@ -46,11 +46,11 @@ const CLAUDE_CLI_DEFAULT_ARGS = [
   "--allowedTools",
   "mcp__openclaw__*",
   "--disallowedTools",
-  "ScheduleWakeup,CronCreate,Bash(run_in_background:true),Monitor",
+  "ScheduleWakeup,CronCreate,Monitor",
 ] as const;
 
 // Only equivalent bare tools confer general capabilities; Glob and notebook-cell
-// edits do not. Bash is foreground-only at launch, so it never grants `process`.
+// edits do not. Background Bash stays bound to its turn, so Bash never grants `process`.
 const CLAUDE_NATIVE_TOOL_CAPABILITIES: Readonly<Record<string, string>> = {
   read: "read",
   grep: "read",
