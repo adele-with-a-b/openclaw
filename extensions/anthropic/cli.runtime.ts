@@ -21,9 +21,11 @@ const IDLE_TIMEOUT_MS = 10 * 60 * 1_000;
 // Claude Code emits interim results while these run, then delivers their answers
 // in later results under the same admitted turn.
 const RESULT_HOLDING_TASK_TYPES = new Set(["local_agent", "local_workflow"]);
-// Explicit background commands may never finish. Only Bash tasks that started
-// in the foreground and later entered the background list hold their turn.
-const TIMEOUT_BACKGROUNDED_TASK_TYPE = "local_bash";
+// Main-thread Bash in the background list holds its turn too: explicit
+// run_in_background commands and foreground commands that timed out into the
+// background. Same-turn steering keeps input flowing while one runs, and stopping
+// it releases the turn.
+const BACKGROUND_BASH_TASK_TYPE = "local_bash";
 
 function readReplayedTaskId(
   message: Record<string, unknown>,
@@ -67,8 +69,12 @@ type ClaudeCliTurn = {
   inputStarted: boolean;
   sawTerminalResult: boolean;
   foregroundTaskIds: Set<string>;
+  /** Tasks the main thread started already backgrounded (subagent-owned ones excluded). */
+  explicitBackgroundTaskIds: Set<string>;
   foregroundBashToolUseIds: Set<string>;
   pendingBackgroundTaskIds: Set<string>;
+  /** Held Bash tasks. Stopping one produces no notification turn, so its stop releases it. */
+  heldBashTaskIds: Set<string>;
   taskNotifications: Map<string, "queued" | "replayed">;
   /** Same-turn inputs written to native, keyed by UUID until their lifecycle completes. */
   injectedInputs: Map<
@@ -385,12 +391,21 @@ async function acceptMessage(session: ClaudeCliSession, message: Record<string, 
       // task_type is optional here; the background task list names it later.
       if (message.is_backgrounded === false) {
         turn.foregroundTaskIds.add(message.task_id);
+      } else if (message.is_backgrounded === true && message.owned_by_subagent !== true) {
+        // A subagent's own background work notifies that subagent, never this turn.
+        turn.explicitBackgroundTaskIds.add(message.task_id);
       }
       const foregroundBash =
         typeof message.tool_use_id === "string" &&
         turn.foregroundBashToolUseIds.delete(message.tool_use_id);
-      if (foregroundBash && message.is_backgrounded === true) {
+      if (
+        message.is_backgrounded === true &&
+        (foregroundBash ||
+          (message.task_type === BACKGROUND_BASH_TASK_TYPE &&
+            turn.explicitBackgroundTaskIds.has(message.task_id)))
+      ) {
         turn.pendingBackgroundTaskIds.add(message.task_id);
+        turn.heldBashTaskIds.add(message.task_id);
       }
     }
   }
@@ -399,13 +414,19 @@ async function acceptMessage(session: ClaudeCliSession, message: Record<string, 
       if (!isRecord(task) || typeof task.task_id !== "string" || !task.task_id) {
         continue;
       }
+      const mainThreadBash =
+        task.task_type === BACKGROUND_BASH_TASK_TYPE &&
+        (turn.foregroundTaskIds.has(task.task_id) ||
+          turn.explicitBackgroundTaskIds.has(task.task_id));
       if (
         (typeof task.task_type === "string" && RESULT_HOLDING_TASK_TYPES.has(task.task_type)) ||
-        (task.task_type === TIMEOUT_BACKGROUNDED_TASK_TYPE &&
-          turn.foregroundTaskIds.has(task.task_id))
+        mainThreadBash
       ) {
         // Leaving the live task list is not acknowledgement of its queued answer.
         turn.pendingBackgroundTaskIds.add(task.task_id);
+        if (mainThreadBash) {
+          turn.heldBashTaskIds.add(task.task_id);
+        }
       }
     }
   }
@@ -423,8 +444,16 @@ async function acceptMessage(session: ClaudeCliSession, message: Record<string, 
     typeof message.task_id === "string" &&
     message.task_id
   ) {
-    // Include non-held tasks: each queued notification has its own ordered result.
-    turn.taskNotifications.set(message.task_id, "queued");
+    if (message.status === "stopped" && turn.heldBashTaskIds.delete(message.task_id)) {
+      // TaskStop runs inside a query and native opens no notification turn for a
+      // stopped command, so no result would ever consume a queued slot for it.
+      turn.pendingBackgroundTaskIds.delete(message.task_id);
+      turn.foregroundTaskIds.delete(message.task_id);
+      turn.explicitBackgroundTaskIds.delete(message.task_id);
+    } else {
+      // Include non-held tasks: each queued notification has its own ordered result.
+      turn.taskNotifications.set(message.task_id, "queued");
+    }
   }
   const heldResult = turn.heldResult;
   if (heldResult && message.type !== "rate_limit_event") {
@@ -542,8 +571,10 @@ export async function* executeClaudeCli(
     inputStarted: false,
     sawTerminalResult: false,
     foregroundTaskIds: new Set(),
+    explicitBackgroundTaskIds: new Set(),
     foregroundBashToolUseIds: new Set(),
     pendingBackgroundTaskIds: new Set(),
+    heldBashTaskIds: new Set(),
     injectedInputs: new Map(),
     taskNotifications: new Map(),
   };
