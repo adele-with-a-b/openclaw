@@ -1489,10 +1489,21 @@ async function prepareCliRunContextWithinReadFence(
       ? await prepareCliHistoryBoundary(historyParams, historyIdentity)
       : undefined;
     // Explicit caller-owned memory remains input; it cannot authorize borrowed durable history.
+    // Local: with no OpenClaw-held sign-in the run uses the CLI's own login, the only account
+    // this gateway has, so there is no boundary to prove (openclaw/openclaw#154716). Upstream
+    // proves a native login only by attesting a Claude OAuth token, and Bedrock has none.
+    const historyTarget = params.sessionTarget;
+    const ownCliLoginHistory =
+      effectiveAuthProfileId === undefined &&
+      authCredential === undefined &&
+      historyTarget?.sessionId === params.sessionId &&
+      (params.sessionKey === undefined || params.sessionKey === historyTarget.sessionKey);
+    const replayTarget =
+      replayableTarget(cliHistoryWriter) ?? (ownCliLoginHistory ? historyTarget : undefined);
     // Native compatibility and transcript account ownership are independent gates.
     // A session-less backend starts every turn fresh, so the account-owned transcript is
     // its only continuity; the backend's raw-reseed opt-in still decides delivery.
-    const rawTranscriptReseedReason = !(params.sessionManager || replayableTarget(cliHistoryWriter))
+    const rawTranscriptReseedReason = !(params.sessionManager || replayTarget)
       ? "auth-unknown"
       : reusableCliSessionId
         ? "session-expired"
@@ -1571,7 +1582,7 @@ async function prepareCliRunContextWithinReadFence(
         // Operator-kept orchestration tools that survived every later native-tool cap.
         nativeDelegationTools: keptManagedNativeTools(managedNativeTools, params),
         runtimeContextFragments: params.runtimeContextFragments,
-        sessionTarget: params.isolatedCompletion ? undefined : replayableTarget(cliHistoryWriter),
+        sessionTarget: params.isolatedCompletion ? undefined : replayTarget,
         context: [promptBuildHookResult?.appendContext, authorizedPromptBuildResult?.appendContext],
       }));
       params.assertCurrent?.();
