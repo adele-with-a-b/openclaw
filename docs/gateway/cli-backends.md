@@ -171,11 +171,14 @@ Exact tool selections, tool-free side questions, standalone CLI runs without
 Gateway MCP, and paired-node Claude runs keep their existing tool contracts.
 Plugin tools such as remote SSH do not become background jobs automatically.
 
-When Claude Code moves a foreground Bash command to the background after its tool timeout,
-OpenClaw keeps the turn active until Claude processes the completion and returns its final answer.
-Follow-up tools still require the current turn's host permissions. Commands started explicitly
-in the background do not hold the turn open. If the turn fails or is cancelled while one of these
-commands still needs a follow-up, OpenClaw closes that subprocess and starts a fresh one for the next turn.
+When Claude Code runs a Bash command in the background, either because Claude asked for
+`run_in_background` or because a foreground command passed its tool timeout, OpenClaw keeps the
+turn active until Claude processes the completion and returns its final answer. Messages sent
+meanwhile steer into that turn. A command Claude stops with TaskStop releases the turn without a
+completion. Background commands a subagent starts belong to that subagent and do not hold the
+parent turn. Follow-up tools still require the current turn's host permissions. If the turn fails
+or is cancelled while one of these commands still needs a follow-up, OpenClaw closes that
+subprocess and starts a fresh one for the next turn.
 
 While native background agents or workflows continue, a completed Claude answer can reach the
 channel through the normal reply pipeline without waiting for the continuation to finish.
@@ -450,20 +453,20 @@ Anthropic owns `claude-cli` and Google owns `google-gemini-cli`. OpenAI Codex ag
 
 The bundled Anthropic plugin registers for `claude-cli`:
 
-| Key                   | Value                                                                                                                                                                                                         |
-| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `command`             | `claude`                                                                                                                                                                                                      |
-| `args`                | `-p --output-format stream-json --include-partial-messages --verbose --setting-sources user --allowedTools mcp__openclaw__* --disallowedTools ScheduleWakeup,CronCreate,Bash(run_in_background:true),Monitor` |
-| `output`              | `jsonl`                                                                                                                                                                                                       |
-| `input`               | `stdin`                                                                                                                                                                                                       |
-| `modelArg`            | `--model`                                                                                                                                                                                                     |
-| `sessionArgs`         | `["--session-id", "{sessionId}"]`                                                                                                                                                                             |
-| `sessionMode`         | `always`                                                                                                                                                                                                      |
-| agent runtime         | Direct stdio transport to a warm, session-scoped Claude Code subprocess                                                                                                                                       |
-| `imageArg`            | `@`                                                                                                                                                                                                           |
-| `imagePathScope`      | `workspace`                                                                                                                                                                                                   |
-| `systemPromptFileArg` | `--append-system-prompt-file`                                                                                                                                                                                 |
-| `systemPromptMode`    | `append`                                                                                                                                                                                                      |
+| Key                   | Value                                                                                                                                                                            |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `command`             | `claude`                                                                                                                                                                         |
+| `args`                | `-p --output-format stream-json --include-partial-messages --verbose --setting-sources user --allowedTools mcp__openclaw__* --disallowedTools ScheduleWakeup,CronCreate,Monitor` |
+| `output`              | `jsonl`                                                                                                                                                                          |
+| `input`               | `stdin`                                                                                                                                                                          |
+| `modelArg`            | `--model`                                                                                                                                                                        |
+| `sessionArgs`         | `["--session-id", "{sessionId}"]`                                                                                                                                                |
+| `sessionMode`         | `always`                                                                                                                                                                         |
+| agent runtime         | Direct stdio transport to a warm, session-scoped Claude Code subprocess                                                                                                          |
+| `imageArg`            | `@`                                                                                                                                                                              |
+| `imagePathScope`      | `workspace`                                                                                                                                                                      |
+| `systemPromptFileArg` | `--append-system-prompt-file`                                                                                                                                                    |
+| `systemPromptMode`    | `append`                                                                                                                                                                         |
 
 On Claude Code 2.1.98 or newer, the bundled backend adds
 `--exclude-dynamic-system-prompt-sections` after a bounded version check on the
