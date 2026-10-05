@@ -18,8 +18,7 @@ type ClaudePreparedExecutionWithSecret = {
   };
 };
 
-const CLAUDE_CLI_DISALLOWED_TOOLS =
-  "ScheduleWakeup,CronCreate,Bash(run_in_background:true),Monitor";
+const CLAUDE_CLI_DISALLOWED_TOOLS = "ScheduleWakeup,CronCreate,Monitor";
 const CLAUDE_CACHE_FLAG = "--exclude-dynamic-system-prompt-sections";
 
 const argv = (...parts: string[]) => parts.flatMap((part) => part.split(" "));

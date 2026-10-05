@@ -131,6 +131,33 @@ async function expectWarmResume(
   expect(context.liveSession?.current()).toBe(handle);
 }
 
+// Local: runs a turn whose first result must be interim, then releases its fixture background work.
+async function collectHeld(context: CliBackendExecuteContext) {
+  const interim = createDeferred<Record<string, unknown>>();
+  let settled = false;
+  const running = (async () => {
+    const records: Record<string, unknown>[] = [];
+    for await (const record of executeClaudeCli(context)) {
+      records.push(record);
+      if (record.type === "result") {
+        interim.resolve(record);
+      }
+    }
+    settled = true;
+    return records;
+  })();
+  try {
+    expect(await interim.promise).toMatchObject({ type: "result", openclaw_interim_result: true });
+    expect(settled).toBe(false);
+    expect(context.liveSession?.current()?.isIdle()).toBe(false);
+  } finally {
+    await releaseFixture(context, "background");
+  }
+  const records = await running;
+  expect(records.at(-1)).not.toHaveProperty("openclaw_interim_result");
+  return records;
+}
+
 async function startInjection(scenario: string, overrides: Partial<CliBackendExecuteContext> = {}) {
   let injection: CliBackendMessageInjection | undefined;
   const context = await createContext(scenario, {
@@ -436,18 +463,42 @@ describe("Claude native stdio boundary", () => {
     });
     context.env.CLAUDE_FIXTURE_EXPLICIT_BACKGROUND = explicit ? "1" : "0";
     const records = await collect(context);
-    expectFinalResults(records, explicit ? 1 : 2);
+    // Local: explicit run_in_background holds the turn like an automatic timeout does.
+    expectFinalResults(records, 2);
     expect(context.liveSession?.current()?.isIdle()).toBe(true);
     if (explicit) {
+      // The held turn already took the background completion, so the next turn is a plain one.
       const first = resultDetail(records);
       const handle = context.liveSession?.current();
-      expect(await runDetail(context, { useResume: true })).toMatchObject({
-        firstSeenBackground: true,
-        turn: 2,
-        pid: first.pid,
-      });
+      const next = await runDetail(context, { useResume: true });
+      expect(next).toMatchObject({ turn: 2, pid: first.pid });
+      expect(next).not.toHaveProperty("firstSeenBackground");
       expect(context.liveSession?.current()).toBe(handle);
     }
+  });
+
+  it.each(["completed", "stopped"])(
+    "holds the turn for a Bash call started in the background until it is %s",
+    async (status) => {
+      // Local. Same-turn steering keeps input flowing during the hold; a stopped command
+      // has no notification turn, so its stop alone must release the turn.
+      const context = await createContext(`explicit-bash-${status}`);
+      const first = resultDetail(await collectHeld(context));
+      expect(first).toMatchObject({ finalBackgroundAnswer: true, stopped: status === "stopped" });
+      expect(context.liveSession?.current()?.isIdle()).toBe(true);
+      // The warm process takes the next turn with a fresh task ID; its release is already written.
+      const next = resultDetail(await collect({ ...context, useResume: true }));
+      expect(next).toMatchObject({ finalBackgroundAnswer: true, turn: 2, pid: first.pid });
+    },
+  );
+
+  it("does not hold the parent turn for background Bash a subagent owns", async () => {
+    // Local.
+    const context = await createContext("explicit-bash-subagent");
+    expectFinalResults(await collect(context), 1);
+    // Upstream retires a warm process that still has running descendant work, so the
+    // subagent's command cannot borrow the next turn's authority.
+    expect(context.liveSession?.current()).toBeUndefined();
   });
 
   it.for(["abort", "process exit"])(

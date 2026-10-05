@@ -19,6 +19,11 @@ import { createClaudeCliTransport } from "./cli-transport.js";
 import { createClaudeCliUserInputAuthorizer } from "./cli-user-input.js";
 
 const IDLE_TIMEOUT_MS = 10 * 60 * 1_000;
+// Main-thread Bash in the background list holds its turn the way background agents
+// do: explicit run_in_background commands and foreground commands that timed out into
+// the background. Same-turn steering keeps input flowing while one runs, and stopping
+// it releases the turn.
+const BACKGROUND_BASH_TASK_TYPE = "local_bash";
 
 /**
  * Host-internal, like the forwarded auth credential and not part of the plugin SDK: a host
@@ -43,6 +48,8 @@ type ClaudeCliTurn = {
   sawTerminalResult: boolean;
   interrupted: boolean;
   foregroundTaskIds: Set<string>;
+  /** Tasks the main thread started already backgrounded (subagent-owned ones excluded). */
+  explicitBackgroundTaskIds: Set<string>;
   foregroundBashToolUseIds: Set<string>;
   pendingBackgroundTaskIds: Set<string>;
   taskNotifications: Map<string, "queued" | "replayed">;
@@ -390,7 +397,8 @@ async function acceptMessage(session: ClaudeCliSession, message: Record<string, 
               input.pendingBackgroundTaskIds.has(id)) &&
             (task.task_type === "local_agent" ||
               task.task_type === "local_workflow" ||
-              (task.task_type === "local_bash" && input.foregroundTaskIds.has(id)))
+              (task.task_type === BACKGROUND_BASH_TASK_TYPE &&
+                (input.foregroundTaskIds.has(id) || input.explicitBackgroundTaskIds.has(id))))
           ) {
             // Disappearing from a snapshot does not acknowledge the queued answer.
             input.pendingBackgroundTaskIds.add(id);
@@ -467,13 +475,19 @@ async function acceptMessage(session: ClaudeCliSession, message: Record<string, 
     taskId &&
     session.taskOwners.get(taskId) === turn.inputUuid
   ) {
+    // task_type is optional here; the background task list names it later.
     if (message.is_backgrounded === false) {
       turn.foregroundTaskIds.add(taskId);
+    } else if (message.is_backgrounded === true) {
+      turn.explicitBackgroundTaskIds.add(taskId);
     }
     const foregroundBash =
       typeof message.tool_use_id === "string" &&
       turn.foregroundBashToolUseIds.delete(message.tool_use_id);
-    if (foregroundBash && message.is_backgrounded === true) {
+    if (
+      message.is_backgrounded === true &&
+      (foregroundBash || message.task_type === BACKGROUND_BASH_TASK_TYPE)
+    ) {
       turn.pendingBackgroundTaskIds.add(taskId);
     }
   }
@@ -491,6 +505,7 @@ async function acceptMessage(session: ClaudeCliSession, message: Record<string, 
       turn.pendingBackgroundTaskIds.delete(taskId);
       turn.foregroundTaskIds.delete(taskId);
       turn.taskNotifications.delete(taskId);
+      turn.explicitBackgroundTaskIds.delete(taskId);
     } else if (turn.foregroundTaskIds.has(taskId) && !turn.pendingBackgroundTaskIds.has(taskId)) {
       turn.foregroundTaskIds.delete(taskId);
     } else {
@@ -628,6 +643,7 @@ export async function* executeClaudeCli(
     sawTerminalResult: false,
     interrupted: false,
     foregroundTaskIds: new Set(),
+    explicitBackgroundTaskIds: new Set(),
     foregroundBashToolUseIds: new Set(),
     pendingBackgroundTaskIds: new Set(),
     injectedInputs: new Map(),

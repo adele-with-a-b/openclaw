@@ -314,6 +314,29 @@ for await (const line of createInterface({ input: process.stdin })) {
       preTool("bg-pre", "Read", { file_path: "fixture.txt" }, "tool-bg-read", { cwd: process.cwd() });
       continue;
     }
+    if (scenario?.startsWith("explicit-bash-")) {
+      // run_in_background in Claude Code 2.1.289's order: the task list names it before task_started.
+      const subagent = scenario === "explicit-bash-subagent";
+      // Native task IDs are unique per task; ownership is recorded per ID for the session.
+      const task = { task_id: "server-" + turn, task_type: "local_bash" };
+      tasks([task]);
+      system("task_started", { ...task, tool_use_id: "tool-bg", description: "dev server", is_backgrounded: true,
+        ...(subagent ? { owned_by_subagent: true } : {}) });
+      result({ explicitBackground: true });
+      if (subagent) continue;
+      writeFileSync("background.ready", "ready");
+      while (!existsSync("background.release")) await delay(5);
+      const stopped = scenario === "explicit-bash-stopped";
+      tasks([]);
+      system("task_notification", { task_id: task.task_id, tool_use_id: "tool-bg",
+        status: stopped ? "stopped" : "completed", output_file: "", summary: "dev server" });
+      // TaskStop's own query answers; native opens no notification turn for a stopped command.
+      if (stopped) nativeResult(JSON.stringify({ pid: process.pid, turn, finalBackgroundAnswer: true, stopped }),
+        { num_turns: 1, stop_reason: "end_turn" });
+      else nativeResult(JSON.stringify({ pid: process.pid, turn, finalBackgroundAnswer: true, stopped }),
+        { origin: { kind: "task-notification", producer: "session-task" }, num_turns: 1, stop_reason: "end_turn" });
+      continue;
+    }
     if (["background-bash-queued-error", "background-bash-queued-raw-result"].includes(scenario) && turn === 1) {
       const task = { task_id: "background-task", task_type: "local_bash" };
       system("task_started", { task_id: task.task_id,
@@ -517,11 +540,10 @@ for await (const line of createInterface({ input: process.stdin })) {
         tasks([task]);
         system("task_started", { ...task, tool_use_id: "tool-" + turn, is_backgrounded: true });
         result({ firstSeenBackground: true });
-        if (!explicitBackground) {
-          tasks([]);
-          system("task_notification", { task_id: task.task_id, status: "completed" });
-          nativeResult(JSON.stringify({ pid: process.pid, turn, finalBackgroundAnswer: true }), { origin: { kind: "task-notification" }, num_turns: 1 });
-        }
+        // Local: explicit run_in_background holds the turn too, so both shapes complete in it.
+        tasks([]);
+        system("task_notification", { task_id: task.task_id, status: "completed" });
+        nativeResult(JSON.stringify({ pid: process.pid, turn, finalBackgroundAnswer: true }), { origin: { kind: "task-notification" }, num_turns: 1 });
         continue;
       }
       if (scenario === "cancel-permission") {
