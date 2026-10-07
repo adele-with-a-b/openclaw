@@ -4,7 +4,6 @@ import { PassThrough } from "node:stream";
 import type {
   CliBackendExecuteContext,
   CliBackendLiveSessionCapability,
-  CliBackendLiveSessionCloseReason,
   CliBackendLiveSessionHandle,
   CliBackendToolPermissionResult,
 } from "openclaw/plugin-sdk/cli-backend";
@@ -17,12 +16,6 @@ import { createClaudeCliTransport } from "./cli-transport.js";
 import { createClaudeCliUserInputAuthorizer } from "./cli-user-input.js";
 
 const IDLE_TIMEOUT_MS = 10 * 60 * 1_000;
-// Claude Code emits interim results while these run, then delivers their answers
-// in later results under the same admitted turn.
-const RESULT_HOLDING_TASK_TYPES = new Set(["local_agent", "local_workflow"]);
-// Explicit background commands may never finish. Only Bash tasks that started
-// in the foreground and later entered the background list hold their turn.
-const TIMEOUT_BACKGROUNDED_TASK_TYPE = "local_bash";
 
 function readReplayedTaskId(
   message: Record<string, unknown>,
@@ -68,10 +61,6 @@ type ClaudeCliTurn = {
   foregroundTaskIds: Set<string>;
   foregroundBashToolUseIds: Set<string>;
   pendingBackgroundTaskIds: Set<string>;
-  /**
-   * Tasks a subagent started for itself. Native reports their completion on the main
-   * stream with no owner field, but answers it inside that subagent, never with a result.
-   */
   subagentTaskIds: Set<string>;
   taskNotifications: Map<string, "queued" | "replayed">;
   error?: Error;
@@ -110,8 +99,7 @@ async function authorizeTool(
   signal: AbortSignal,
 ): Promise<CliBackendToolPermissionResult> {
   const turn = activeTurn(session);
-  const input = request.input;
-  const toolName = request.tool_name;
+  const { input, tool_name: toolName } = request;
   if (!turn || signal.aborted || typeof toolName !== "string" || !isRecord(input)) {
     return {
       behavior: "deny",
@@ -212,11 +200,7 @@ async function handleRequest(
   throw new Error("Unknown Claude CLI hook callback.");
 }
 
-function closeSession(
-  session: ClaudeCliSession,
-  _reason: CliBackendLiveSessionCloseReason,
-  error?: unknown,
-) {
+function closeSession(session: ClaudeCliSession, error?: unknown) {
   if (session.closed) {
     return;
   }
@@ -272,7 +256,6 @@ async function acceptMessage(session: ClaudeCliSession, message: Record<string, 
   }
   if (message.type === "system" && message.subtype === "task_started") {
     if (message.owned_by_subagent === true) {
-      // A subagent's own work, foreground or background, notifies that subagent, never this turn.
       if (typeof message.task_id === "string" && message.task_id) {
         turn.subagentTaskIds.add(message.task_id);
       }
@@ -295,9 +278,9 @@ async function acceptMessage(session: ClaudeCliSession, message: Record<string, 
         continue;
       }
       if (
-        (typeof task.task_type === "string" && RESULT_HOLDING_TASK_TYPES.has(task.task_type)) ||
-        (task.task_type === TIMEOUT_BACKGROUNDED_TASK_TYPE &&
-          turn.foregroundTaskIds.has(task.task_id))
+        task.task_type === "local_agent" ||
+        task.task_type === "local_workflow" ||
+        (task.task_type === "local_bash" && turn.foregroundTaskIds.has(task.task_id))
       ) {
         // Leaving the live task list is not acknowledgement of its queued answer.
         turn.pendingBackgroundTaskIds.add(task.task_id);
@@ -317,8 +300,7 @@ async function acceptMessage(session: ClaudeCliSession, message: Record<string, 
     message.subtype === "task_notification" &&
     typeof message.task_id === "string" &&
     message.task_id &&
-    // Queuing a subagent's own task would let the next task-notification result consume
-    // its slot instead of the agent's, leaving the agent pending and the turn open.
+    // Subagent completions have no parent result and must not consume its queue slots.
     !turn.subagentTaskIds.delete(message.task_id)
   ) {
     // Include non-held tasks: each queued notification has its own ordered result.
@@ -385,7 +367,7 @@ function createSession(capability?: CliBackendLiveSessionCapability): ClaudeCliS
       generation: randomUUID(),
       fingerprint: capability?.fingerprint ?? randomUUID(),
       isIdle: () => !session.closed && !session.currentTurn,
-      close: (reason, error) => closeSession(session, reason, error),
+      close: (_reason, error) => closeSession(session, error),
       waitForExit: () => session.transport?.waitForExit() ?? Promise.resolve(),
     },
   };
