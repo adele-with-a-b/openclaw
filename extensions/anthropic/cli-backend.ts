@@ -176,7 +176,8 @@ export function buildAnthropicCliBackend(
     bundleMcp: true,
     bundleMcpMode: "claude-config-file",
     nativeToolMode: "selectable",
-    hostOwnedTools: ["exec", "process"],
+    // Local: no hostOwnedTools, so Claude keeps native Bash. The M5's hooks watch Bash and
+    // its local commit holds the turn for background Bash, so exec would bypass both.
     toolAvailabilityEnforcement: "execution-args",
     transformSystemPrompt: ({ systemPrompt, openClawMcpToolNames }) =>
       appendClaudeCliToolNamingGuidance(systemPrompt, openClawMcpToolNames),
