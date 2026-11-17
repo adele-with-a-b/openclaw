@@ -8,6 +8,8 @@ import { expandToolGroups, normalizeToolPolicyName } from "../tool-policy.js";
 import { resolveToolSearchConfig } from "../tool-search-config.js";
 import type { RunCliAgentParams } from "./types.js";
 
+const LOCAL_MEDIATE_ORDINARY_CLAUDE_TURNS = false;
+
 /**
  * Translate the caller's runtime tool cap into the CLI run's exact tool availability.
  * Native CLI tools cannot enforce workspace, channel, or inherited completion caps, so those
@@ -104,7 +106,12 @@ export async function resolveCliRuntimeToolPolicy(input: {
     params.controlOperation === undefined &&
     !(input.isSideQuestion && input.sideQuestionToolMode === "disabled") &&
     resolveEffectiveToolFsWorkspaceOnly({ cfg: params.config, agentId: input.policyAgentId });
+  // Local (M5): ordinary claude-cli turns are not mediated. Mediation launches claude with
+  // empty setting sources, disableAllHooks and only Agent/Workflow native, so the M5's
+  // hooks, skills and native Bash never run in an OpenClaw chat. Completion turns and every
+  // restricted, delegated or workspace-only turn above stay mediated.
   const ordinaryClaudeMediation =
+    LOCAL_MEDIATE_ORDINARY_CLAUDE_TURNS &&
     input.backendId === "claude-cli" &&
     input.bundleMcp &&
     input.canEnforceExactToolAvailability &&

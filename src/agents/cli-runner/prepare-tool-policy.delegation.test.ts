@@ -67,8 +67,13 @@ async function expectPolicy(request: Input, tools?: Tools, allow?: string[]) {
   expect([params.cliToolAvailability, runtimeToolsAllowPolicy]).toEqual([tools, allow]);
 }
 
-it.each([base, ordinary])("mediates delegated and ordinary Claude turns: %j", async (request) => {
-  await expectPolicy(request, emptyTools, ["*"]);
+it("mediates delegated Claude turns", async () => {
+  await expectPolicy(base, emptyTools, ["*"]);
+});
+
+// Local (M5): an ordinary Claude turn keeps its native tools, hooks and user settings.
+it("leaves ordinary Claude turns unmediated", async () => {
+  await expectPolicy(ordinary, undefined);
 });
 
 it("refuses a backend that cannot enforce live delegated authority", async () => {
@@ -147,17 +152,18 @@ function withManagedNative(overrides: Overrides, defaults = ordinary): Input {
   );
 }
 
-it.each([{}, { params: completion }])(
-  "keeps the operator's managed native tools on ordinary and completion turns: %j",
-  async (overrides) => {
-    await expectPolicy(withManagedNative(overrides), { native: managedNative, openClaw: [] }, [
-      "*",
-    ]);
-    // Prepare reads this list to know the selection confers no file capability.
-    const result = await resolveCliRuntimeToolPolicy(withManagedNative(overrides));
-    expect(result.managedNativeTools).toEqual(managedNative);
-  },
-);
+it("keeps the operator's managed native tools on completion turns", async () => {
+  const overrides = { params: completion };
+  await expectPolicy(withManagedNative(overrides), { native: managedNative, openClaw: [] }, ["*"]);
+  // Prepare reads this list to know the selection confers no file capability.
+  const result = await resolveCliRuntimeToolPolicy(withManagedNative(overrides));
+  expect(result.managedNativeTools).toEqual(managedNative);
+});
+
+it("leaves an ordinary turn its whole native surface beside managed native tools", async () => {
+  const result = await resolveCliRuntimeToolPolicy(withManagedNative({}));
+  expect([result.params.cliToolAvailability, result.managedNativeTools]).toEqual([undefined, []]);
+});
 
 it.each<[string, Overrides, Input]>([
   ["delegated execution", {}, base],
